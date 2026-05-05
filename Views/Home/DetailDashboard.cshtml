@@ -379,7 +379,7 @@
         var timeStr = ((DateTime)p.AppointmentDateTime).ToString("HH:mm");
         var dateStr = ((DateTime)p.AppointmentDateTime).ToString("dd MMM");
 
-        <a href="?appointmentNo=@p.AppointmentNo"
+        <a href="?appointmentNo=@EncryptHelper.Encrypt(p.AppointmentNo)"
            class="chat-item @(isActive ? "active" : "")"
            data-name="@pName.ToLower()"
            style="text-decoration:none; color:inherit;">
@@ -485,7 +485,7 @@
             <div class="med-list">
                 <div class="med-item">
                     <div>
-                        <div class="med-rx">Prescription No: EMR-@Model.AppointmentNo-001</div>
+                        <div class="med-rx">Prescription No: EMR-  @Model.AppointmentNo-001</div>
                         <div class="med-name">Amoxicillin 500mg Capsule</div>
                         <div class="med-dose">3x1 — 10 days · Oral</div>
                     </div>

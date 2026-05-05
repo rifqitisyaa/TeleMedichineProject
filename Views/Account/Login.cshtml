@@ -1,0 +1,157 @@
+﻿@model MasterPageTest.Models.LoginViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sphaira — Staff Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #E8F0FB; }
+
+        /* LEFT */
+        .left { width: 45%; background: #1B3A6B; display: flex; flex-direction: column; justify-content: space-between; padding: 40px 36px; }
+        .logo { font-size: 24px; font-weight: 800; color: white; letter-spacing: -0.5px; }
+        .logo span { color: #0EA5E9; }
+        .left-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+        .restricted-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.35); border-radius: 8px; padding: 8px 14px; width: fit-content; }
+        .restricted-text { font-size: 12px; color: #FCA5A5; font-weight: 600; }
+        .left-tagline { font-size: 26px; font-weight: 800; color: white; line-height: 1.35; }
+        .left-sub { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; }
+        .divider-left { height: 1px; background: rgba(255,255,255,0.1); }
+        .pill-group { display: flex; flex-direction: column; gap: 10px; }
+        .pill { display: flex; align-items: center; gap: 10px; }
+        .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #0EA5E9; flex-shrink: 0; }
+        .pill-text { font-size: 12.5px; color: rgba(255,255,255,0.7); }
+        .left-footer { font-size: 11px; color: rgba(255,255,255,0.3); }
+
+        /* RIGHT */
+        .right { flex: 1; background: white; display: flex; flex-direction: column; justify-content: center; padding: 48px 44px; }
+        .portal-tag { display: inline-flex; align-items: center; gap: 6px; background: #EFF6FF; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 18px; width: fit-content; letter-spacing: 0.3px; }
+        .portal-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563EB; }
+        .form-title { font-size: 22px; font-weight: 800; color: #1B3A6B; margin-bottom: 4px; }
+        .form-sub { font-size: 13px; color: #94A3B8; margin-bottom: 28px; line-height: 1.5; }
+
+        /* FORM */
+        .field { margin-bottom: 16px; }
+        .field label { display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 6px; letter-spacing: 0.3px; }
+        .input-wrap { position: relative; }
+        .input-wrap .icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+        .field input[type=text], .field input[type=password] {
+            width: 100%; padding: 11px 12px 11px 40px;
+            border: 1.5px solid #E2E8F0; border-radius: 10px;
+            font-size: 13.5px; font-family: inherit;
+            background: #F8FAFC; color: #1E293B; outline: none;
+            transition: border-color .15s, background .15s;
+        }
+        .field input:focus { border-color: #2563EB; background: white; }
+        .eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; }
+        .field-error { font-size: 11.5px; color: #EF4444; margin-top: 5px; display: block; }
+
+        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .remember { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #64748B; cursor: pointer; }
+        .forgot { font-size: 12.5px; color: #2563EB; font-weight: 600; text-decoration: none; }
+
+        .btn-login { width: 100%; padding: 13px; background: #1B3A6B; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background .15s; }
+        .btn-login:hover { background: #2563EB; }
+
+        .error-box { display: flex; align-items: center; gap: 10px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 11px 14px; margin-bottom: 18px; }
+        .error-box span { font-size: 13px; color: #B91C1C; font-weight: 500; }
+
+        .warning-box { display: flex; align-items: flex-start; gap: 9px; background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 10px; padding: 10px 13px; margin-top: 16px; }
+        .warning-text { font-size: 11.5px; color: #92400E; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<!-- LEFT -->
+<div class="left">
+    <div class="logo"><span>S</span>phaira</div>
+    <div class="left-body">
+        <div class="restricted-badge">
+            <svg width="13" height="13" fill="none" stroke="#FCA5A5" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span class="restricted-text">Internal access only</span>
+        </div>
+        <div class="left-tagline">Doctor &amp; Staff<br/>Portal</div>
+        <div class="left-sub">Sistem ini hanya dapat diakses oleh tenaga medis dan staf yang telah terdaftar.</div>
+        <div class="divider-left"></div>
+        <div class="pill-group">
+            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Dashboard appointment pasien</span></div>
+            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Rekam medis &amp; SOAP notes</span></div>
+            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Konsultasi via WhatsApp</span></div>
+            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Manajemen resep &amp; tanda vital</span></div>
+        </div>
+    </div>
+    <div class="left-footer">© 2026 Sphaira · Confidential &amp; Restricted</div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+    <div class="portal-tag"><div class="portal-dot"></div> STAFF PORTAL</div>
+    <div class="form-title">Sign in</div>
+    <div class="form-sub">Masukkan kredensial yang diberikan oleh administrator sistem.</div>
+
+    @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+    {
+        <div class="error-box">
+            <svg width="16" height="16" fill="none" stroke="#EF4444" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>@ViewBag.Error</span>
+        </div>
+    }
+
+    <form asp-controller="Login" asp-action="PostLogin" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="field">
+            <label>USERNAME</label>
+            <div class="input-wrap">
+                <span class="icon">
+                    <svg width="15" height="15" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </span>
+                <input type="text" asp-for="Username" placeholder="Masukkan username" autocomplete="username" />
+            </div>
+            <span asp-validation-for="Username" class="field-error"></span>
+        </div>
+
+        <div class="field">
+            <label>PASSWORD</label>
+            <div class="input-wrap">
+                <span class="icon">
+                    <svg width="15" height="15" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </span>
+                <input type="password" asp-for="Password" id="passwordInput" placeholder="Masukkan password" autocomplete="current-password" style="padding-right: 42px;" />
+                <button type="button" class="eye-btn" onclick="togglePassword()">
+                    <svg id="eyeIcon" width="15" height="15" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <span asp-validation-for="Password" class="field-error"></span>
+        </div>
+
+        <div class="row">
+            <label class="remember">
+                <input type="checkbox" /> Remember me
+            </label>
+            <a href="#" class="forgot">Lupa password?</a>
+        </div>
+
+        <button type="submit" class="btn-login">Sign in</button>
+    </form>
+
+    <div class="warning-box">
+        <svg width="15" height="15" fill="none" stroke="#D97706" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="warning-text">Akses tidak sah akan dicatat dan dilaporkan. Hubungi IT support jika membutuhkan akun baru.</span>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        const input = document.getElementById('passwordInput');
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+</script>
+</body>
+</html>

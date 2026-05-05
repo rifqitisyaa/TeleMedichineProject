@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using TeleMedichineProject.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,7 +17,31 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             )
     ));
 
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromHours(8);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Login/Index";       // redirect kalau belum login
+        options.AccessDeniedPath = "/Login/Index";
+
+        options.Cookie.Name = "AuthCookie";       // optional (biar jelas)
+
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+    });
+
 var app = builder.Build();
+
+// Tambah setelah builder.Services.AddControllersWithViews();
+
+
+app.UseSession();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

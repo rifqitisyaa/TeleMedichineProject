@@ -424,7 +424,7 @@
                                     <td><span class="date-chip">@row.AppointmentDateTime.ToString("d-M-yyyy")</span></td>
                                     <td>
                                         <a asp-area="TeleDashboard" asp-controller="Home" asp-action="DetailDashboard"
-    asp-route-appointmentNo="@row.AppointmentNo" class="btn-detail" title="Detail">
+    asp-route-appointmentNo="@EncryptHelper.Encrypt(row.AppointmentNo)" class="btn-detail" title="Detail">
     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
         <path d="m9 18 6-6-6-6"/>
     </svg>

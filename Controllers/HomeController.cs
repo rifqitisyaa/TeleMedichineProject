@@ -56,8 +56,10 @@ namespace MasterPageTest.TeleDashboard.Controllers
 
         public async Task<IActionResult> DetailDashboard(string appointmentNo)
         {
+            var decrypted = EncryptHelper.Decrypt(appointmentNo);
+
             var appointment = await _db.Appointments
-         .FirstOrDefaultAsync(a => a.AppointmentNo == appointmentNo && !a.IsDeleted);
+         .FirstOrDefaultAsync(a => a.AppointmentNo == decrypted && !a.IsDeleted);
 
             if (appointment == null) return NotFound();
 
@@ -77,7 +79,7 @@ namespace MasterPageTest.TeleDashboard.Controllers
             ViewBag.PatientList = patientList;
 
             ViewBag.PatientList = patientList;
-            ViewBag.CurrentAptNo = appointmentNo;
+            ViewBag.CurrentAptNo = decrypted;
 
             return View(appointment);
         }
