@@ -1,8 +1,512 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model List<TeleMedichineProject.Models.TeleClass.Appointment>
+@using TeleMedichineProject.Helpers;
+@{
+    ViewData["Title"] = "Patients Appointment List";
+    Layout = null;
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Patients Appointment List – Sphaira</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+            :root {
+                --navy:      #1B3A6B;
+                --blue:      #2563EB;
+                --blue-lt:   #EFF6FF;
+                --teal:      #0EA5E9;
+                --teal-lt:   #E0F4FD;
+                --green:     #16A34A;
+                --green-lt:  #DCFCE7;
+                --red:       #DC2626;
+                --gray-50:   #F8FAFC;
+                --gray-100:  #F1F5F9;
+                --gray-200:  #E2E8F0;
+                --gray-400:  #94A3B8;
+                --gray-600:  #475569;
+                --gray-800:  #1E293B;
+                --white:     #FFFFFF;
+                --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+                --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+            }
+
+            body {
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                background: var(--gray-100);
+                color: var(--gray-800);
+                min-height: 100vh;
+            }
+
+            /* ── NAVBAR ───────────────────────────────────── */
+            .navbar {
+                background: var(--white);
+                border-bottom: 1px solid var(--gray-200);
+                padding: 0 32px;
+                height: 64px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                box-shadow: var(--shadow-sm);
+            }
+
+            .navbar-left { display: flex; align-items: center; gap: 20px; }
+
+            .logo {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--navy);
+                letter-spacing: -0.5px;
+            }
+            .logo span { color: var(--teal); }
+
+            .welcome-text {
+                font-size: 13.5px;
+                color: var(--gray-600);
+                border-left: 1px solid var(--gray-200);
+                padding-left: 20px;
+            }
+            .welcome-text strong { color: var(--navy); }
+
+            .navbar-right { display: flex; align-items: center; gap: 12px; }
+
+            .nav-link {
+                font-size: 13.5px;
+                font-weight: 500;
+                color: var(--gray-600);
+                text-decoration: none;
+                padding: 6px 14px;
+                border-radius: 8px;
+                transition: background .15s;
+            }
+            .nav-link:hover { background: var(--gray-100); }
+
+            .btn-profile {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--navy);
+                color: var(--white);
+                font-size: 13.5px;
+                font-weight: 600;
+                padding: 7px 16px 7px 8px;
+                border-radius: 50px;
+                border: none;
+                cursor: pointer;
+                transition: background .15s;
+            }
+            .btn-profile:hover { background: #254d91; }
+
+            .avatar {
+                width: 32px; height: 32px;
+                border-radius: 50%;
+                background: var(--teal);
+                display: flex; align-items: center; justify-content: center;
+                font-weight: 700; font-size: 13px; color: white;
+            }
+
+            /* ── MAIN ─────────────────────────────────────── */
+            .main { padding: 32px; max-width: 1300px; margin: 0 auto; }
+
+            .page-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 24px;
+            }
+
+            .page-title {
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--navy);
+                letter-spacing: -0.3px;
+            }
+
+            .btn-save {
+                background: var(--green);
+                color: var(--white);
+                font-size: 14px;
+                font-weight: 600;
+                padding: 10px 28px;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: background .15s, transform .1s;
+            }
+            .btn-save:hover { background: #15803d; transform: translateY(-1px); }
+            .btn-save:active { transform: translateY(0); }
+
+            /* ── CARD ─────────────────────────────────────── */
+            .card {
+                background: var(--white);
+                border-radius: 16px;
+                box-shadow: var(--shadow-md);
+                overflow: hidden;
+            }
+
+            /* ── TOOLBAR ──────────────────────────────────── */
+            .toolbar {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 20px 24px;
+                border-bottom: 1px solid var(--gray-100);
+                flex-wrap: wrap;
+            }
+
+            .search-wrap {
+                position: relative;
+                flex: 1;
+                min-width: 220px;
+                max-width: 340px;
+            }
+            .search-wrap svg {
+                position: absolute;
+                left: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--gray-400);
+            }
+            .search-input {
+                width: 100%;
+                padding: 10px 14px 10px 42px;
+                border: 1.5px solid var(--gray-200);
+                border-radius: 10px;
+                font-size: 13.5px;
+                font-family: inherit;
+                color: var(--gray-800);
+                background: var(--gray-50);
+                outline: none;
+                transition: border-color .15s, box-shadow .15s;
+            }
+            .search-input:focus {
+                border-color: var(--teal);
+                box-shadow: 0 0 0 3px rgba(14,165,233,.12);
+            }
+            .search-input::placeholder { color: var(--gray-400); }
+
+            .filter-wrap {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .filter-label {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--gray-600);
+            }
+            .filter-select {
+                padding: 9px 36px 9px 14px;
+                border: 1.5px solid var(--gray-200);
+                border-radius: 10px;
+                font-size: 13.5px;
+                font-family: inherit;
+                color: var(--gray-800);
+                background: var(--gray-50);
+                outline: none;
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 12px center;
+                cursor: pointer;
+                transition: border-color .15s;
+            }
+            .filter-select:focus { border-color: var(--teal); }
+
+            /* ── TABLE ────────────────────────────────────── */
+            .table-wrap { overflow-x: auto; }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13.5px;
+            }
+
+            thead tr {
+                background: linear-gradient(90deg, #1B3A6B 0%, #2563EB 100%);
+            }
+            thead th {
+                color: var(--white);
+                font-weight: 600;
+                padding: 13px 16px;
+                text-align: left;
+                white-space: nowrap;
+                letter-spacing: 0.2px;
+            }
+            thead th:first-child { border-radius: 0; }
+
+            tbody tr {
+                border-bottom: 1px solid var(--gray-100);
+                transition: background .12s;
+            }
+            tbody tr:hover { background: var(--blue-lt); }
+            tbody tr:last-child { border-bottom: none; }
+
+            tbody td {
+                padding: 12px 16px;
+                color: var(--gray-800);
+                vertical-align: middle;
+            }
+
+            .td-no { color: var(--gray-600); font-weight: 500; text-align: center; width: 44px; }
+
+            .td-apt { font-weight: 600; color: var(--navy); white-space: nowrap; }
+
+            .td-check { width: 36px; }
+            .td-check input[type="checkbox"] {
+                width: 16px; height: 16px;
+                accent-color: var(--blue);
+                cursor: pointer;
+                border-radius: 4px;
+            }
+
+            .td-patient { font-weight: 600; }
+
+            .badge-paket {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 3px 9px;
+                border-radius: 20px;
+                background: var(--teal-lt);
+                color: var(--teal);
+                white-space: nowrap;
+            }
+
+            .date-chip {
+                font-size: 12.5px;
+                font-weight: 600;
+                color: var(--navy);
+                background: var(--blue-lt);
+                padding: 4px 10px;
+                border-radius: 20px;
+                white-space: nowrap;
+            }
+
+            .btn-detail {
+                width: 32px; height: 32px;
+                border-radius: 8px;
+                border: 1.5px solid var(--gray-200);
+                background: var(--white);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: var(--gray-600);
+                transition: all .15s;
+            }
+            .btn-detail:hover {
+                background: var(--navy);
+                color: var(--white);
+                border-color: var(--navy);
+            }
+
+            /* ── PAGINATION ───────────────────────────────── */
+            .pagination {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 18px 24px;
+                border-top: 1px solid var(--gray-100);
+                flex-wrap: wrap;
+            }
+
+            .page-btn {
+                min-width: 34px; height: 34px;
+                border-radius: 8px;
+                border: 1.5px solid var(--gray-200);
+                background: var(--white);
+                font-size: 13px;
+                font-family: inherit;
+                font-weight: 500;
+                color: var(--gray-700);
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 10px;
+                transition: all .15s;
+            }
+            .page-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-lt); }
+            .page-btn.active {
+                background: var(--navy);
+                border-color: var(--navy);
+                color: var(--white);
+                font-weight: 700;
+            }
+            .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+            .page-dots { color: var(--gray-400); padding: 0 4px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <div class="logo"><span>S</span>phaira</div>
+            <div class="welcome-text">Welcome back, <strong>Dr. Oppenheimer</strong></div>
+        </div>
+        <div class="navbar-right">
+            <a href="#" class="nav-link">Patients</a>
+            <button class="btn-profile">
+                <div class="avatar">JO</div>
+                Profile
+            </button>
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <div class="page-header">
+            <h1 class="page-title">Patients Tekemedichine List</h1>
+            
+        </div>
+
+        <div class="card">
+            <!-- TOOLBAR -->
+            <form method="get" asp-area="TeleDashboard" asp-controller="Home" asp-action="Index">
+    <div class="toolbar">
+        <div class="search-wrap">
+            <svg .../>
+            <input class="search-input" type="text" name="search" 
+                   placeholder="Search Appointment" value="@ViewBag.Search" />
+        </div>
+        <div class="filter-wrap">
+            <span class="filter-label">Filter :</span>
+            <select class="filter-select" name="workstation" onchange="this.form.submit()">
+                <option value="">Workstation Type : All</option>
+                @foreach (var ws in ViewBag.Workstations as List<string>)
+                {
+                    <option value="@ws" selected="@(ViewBag.SelectedWorkstation == ws)">@ws</option>
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn-save" style="padding:10px 20px">Search</button>
+    </div>
+</form>
+
+            <!-- TABLE -->
+            <div class="table-wrap">
+                <table id="appointmentTable">
+                    <thead>
+                        <tr>
+                            <th style="width:44px">No.</th>
+                            <th style="width:36px"></th>
+                            <th>Appointment No.</th>
+                            <th>Patient Name</th>
+                            <th>Workstation</th>
+                            <th>Address</th>
+                            <th>Paket</th>
+                            <th>Appointment Date</th>
+                            <th style="width:48px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        @foreach (var (row, i) in Model.Select((r, i) => (r, i + 1)))
+                            {   
+                                <tr>
+                                    <td class="td-no">@i</td>
+                                    <td class="td-check"><input type="checkbox" /></td>
+                                    <td class="td-apt">@row.AppointmentNo</td>
+                                    <td class="td-patient">@(row.PatientName ?? $"{row.FirstName} {row.LastName}")</td>
+                                    <td>@row.WorkStationCode</td>
+                                    <td style="max-width:200px; color:var(--gray-600)">@row.Address</td>
+                                    <td><span class="badge-paket">@row.VisitTypeCode</span></td>
+                                    <td><span class="date-chip">@row.AppointmentDateTime.ToString("d-M-yyyy")</span></td>
+                                    <td>
+                                        <a asp-area="TeleDashboard" asp-controller="Home" asp-action="DetailDashboard"
+    asp-route-appointmentNo="@row.AppointmentNo" class="btn-detail" title="Detail">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path d="m9 18 6-6-6-6"/>
+    </svg>
+</a>
+                                    </td>
+                                </tr>
+                            }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAGINATION -->
+            <div class="pagination">
+                @{
+                    int cur   = ViewBag.CurrentPage;
+                    int total = ViewBag.TotalPages;
+                }
+            
+                @if (cur > 1)
+                {
+                    <a class="page-btn"
+                       asp-area="TeleDashboard" asp-controller="Home" asp-action="Index"
+                       asp-route-page="@(cur - 1)"
+                       asp-route-search="@ViewBag.Search"
+                       asp-route-workstation="@ViewBag.SelectedWorkstation">
+                        ← Previous
+                    </a>
+                }
+                else
+                {
+                    <button class="page-btn" disabled>← Previous</button>
+                }
+            
+                @for (int i = 1; i <= total; i++)
+                {
+                    if (i == 1 || i == total || (i >= cur - 1 && i <= cur + 1))
+                    {
+                        <a class="page-btn @(i == cur ? "active" : "")"
+                           asp-area="TeleDashboard" asp-controller="Home" asp-action="Index"
+                           asp-route-page="@i"
+                           asp-route-search="@ViewBag.Search"
+                           asp-route-workstation="@ViewBag.SelectedWorkstation">
+                            @i
+                        </a>
+                    }
+                    else if (i == cur - 2 || i == cur + 2)
+                    {
+                        <span class="page-dots">...</span>
+                    }
+                }
+            
+                @if (cur < total)
+                {
+                    <a class="page-btn"
+                       asp-area="TeleDashboard" asp-controller="Home" asp-action="Index"
+                       asp-route-page="@(cur + 1)"
+                       asp-route-search="@ViewBag.Search"
+                       asp-route-workstation="@ViewBag.SelectedWorkstation">
+                        Next →
+                    </a>
+                }
+                else
+                {
+                    <button class="page-btn" disabled>Next →</button>
+                }
+            </div>
+        </div>
+    </main>
+
+    <script>
+            function filterTable() {
+                const search  = document.getElementById('searchInput').value.toLowerCase();
+                const station = document.getElementById('filterSelect').value;
+                const rows    = document.querySelectorAll('#tableBody tr');
+
+                rows.forEach(row => {
+                    const matchSearch  = !search  || row.dataset.patient.includes(search) || row.dataset.aptno.includes(search);
+                    const matchStation = !station || row.dataset.station === station;
+                    row.style.display  = (matchSearch && matchStation) ? '' : 'none';
+                });
+            }
+    </script>
+
+</body>
+</html>

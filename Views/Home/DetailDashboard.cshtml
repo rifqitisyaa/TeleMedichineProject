@@ -1,0 +1,888 @@
+﻿@model TeleMedichineProject.Models.TeleClass.Appointment
+@using TeleMedichineProject.Helpers;
+@{
+    ViewData["Title"] = "Appointment Detail";
+    Layout = null;
+    var patientName = Model.PatientName ?? $"{Model.FirstName} {Model.MiddleName} {Model.LastName}".Trim();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detail – @patientName</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy:     #1B3A6B;
+            --blue:     #2563EB;
+            --blue-lt:  #EFF6FF;
+            --blue-md:  #DBEAFE;
+            --teal:     #0EA5E9;
+            --teal-lt:  #E0F4FD;
+            --bg:       #E8F0FB;
+            --white:    #FFFFFF;
+            --gray-100: #F1F5F9;
+            --gray-200: #E2E8F0;
+            --gray-400: #94A3B8;
+            --gray-600: #475569;
+            --gray-800: #1E293B;
+            --red:      #EF4444;
+            --orange:   #F97316;
+            --green:    #22C55E;
+            --shadow:   0 2px 12px rgba(37,99,235,.10);
+            --shadow-md:0 4px 24px rgba(37,99,235,.13);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--gray-800);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── NAVBAR ─────────────────────────────── */
+        .navbar {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            box-shadow: var(--shadow);
+            z-index: 10;
+        }
+        .logo { font-size: 20px; font-weight: 800; color: var(--navy); letter-spacing: -0.5px; }
+        .logo span { color: var(--teal); }
+        .nav-right { display: flex; align-items: center; gap: 10px; }
+        .btn-back {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--blue-lt); color: var(--blue);
+            border: none; border-radius: 8px;
+            padding: 7px 14px; font-size: 13px; font-weight: 600;
+            font-family: inherit; cursor: pointer;
+            text-decoration: none;
+            transition: background .15s;
+        }
+        .btn-back:hover { background: var(--blue-md); }
+
+        /* ── LAYOUT ─────────────────────────────── */
+        .layout {
+            display: grid;
+            grid-template-columns: 270px 1fr 280px;
+            flex: 1;
+            overflow: hidden;
+            gap: 0;
+        }
+
+        /* ── LEFT SIDEBAR ───────────────────────── */
+        .sidebar-left {
+            background: white;
+            border-right: 1px solid var(--gray-200);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-left .search-wrap {
+            padding: 10px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .sidebar-left .search-input {
+            width: 100%;
+            padding: 9px 14px 9px 36px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 12.5px;
+            font-family: inherit;
+            background: var(--gray-100) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+            outline: none;
+        }
+        .sidebar-left .search-input:focus { border-color: var(--teal); }
+
+        .chat-list { overflow-y: auto; flex: 1; }
+
+        .chat-item {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--gray-100);
+            cursor: pointer;
+            transition: background .12s;
+            position: relative;
+        }
+        .chat-item:hover { background: var(--blue-lt); }
+        .chat-item.active { background: var(--blue-md); }
+
+        .chat-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            flex-shrink: 0; overflow: hidden;
+            background: linear-gradient(135deg, var(--teal), var(--blue));
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 13px; color: white;
+        }
+        .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .chat-info { flex: 1; min-width: 0; }
+        .chat-name { font-size: 12.5px; font-weight: 700; color: var(--navy); }
+        .chat-msg  { font-size: 11.5px; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .chat-time { font-size: 10.5px; color: var(--gray-400); position: absolute; top: 12px; right: 12px; }
+        .chat-dot  {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--blue); position: absolute;
+            bottom: 12px; right: 14px;
+        }
+
+        /* ── CENTER ─────────────────────────────── */
+        .center {
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: linear-gradient(90deg, #1B3A6B, #2563EB);
+            color: white;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .section-header .created-by {
+            font-size: 11.5px; font-weight: 400; opacity: .85;
+        }
+
+        /* SOAP Grid */
+        .soap-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--gray-200);
+        }
+        .soap-cell {
+            background: white;
+            padding: 14px 16px;
+        }
+        .soap-label {
+            font-size: 11.5px; font-weight: 700;
+            color: var(--navy); margin-bottom: 8px;
+            text-transform: uppercase; letter-spacing: .4px;
+        }
+        .soap-textarea {
+            width: 100%; height: 90px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12.5px;
+            font-family: inherit;
+            resize: none; outline: none;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            transition: border-color .15s;
+        }
+        .soap-textarea:focus { border-color: var(--teal); background: white; }
+
+        /* Vital Signs */
+        .vital-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 14px;
+        }
+
+        .vital-card {
+            border-radius: 12px;
+            padding: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .vital-card.blood-sugar  { background: linear-gradient(135deg,#FEF3C7,#FDE68A); }
+        .vital-card.heart-rate   { background: linear-gradient(135deg,#FFE4E6,#FECDD3); }
+        .vital-card.blood-press  { background: linear-gradient(135deg,#EDE9FE,#DDD6FE); }
+        .vital-card.body-temp    { background: linear-gradient(135deg,#DCFCE7,#BBF7D0); }
+        .vital-card.resp-rate    { background: linear-gradient(135deg,#E0F2FE,#BAE6FD); }
+
+        .vital-label { font-size: 10px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .3px; }
+        .vital-value { font-size: 26px; font-weight: 800; color: var(--gray-800); margin: 4px 0 0; line-height: 1; }
+        .vital-unit  { font-size: 10px; font-weight: 500; color: var(--gray-600); }
+        .vital-status {
+            display: inline-block;
+            font-size: 10px; font-weight: 700;
+            padding: 2px 8px; border-radius: 20px;
+            margin-top: 6px;
+        }
+        .vital-status.normal  { background: #DCFCE7; color: #16A34A; }
+        .vital-status.warning { background: #FEF3C7; color: #D97706; }
+        .vital-status.danger  { background: #FFE4E6; color: #DC2626; }
+
+        /* Sparkline placeholder */
+        .sparkline {
+            position: absolute; bottom: 8px; right: 8px;
+            opacity: .35;
+        }
+
+        /* Medication */
+        .med-list { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+        .med-item {
+            border: 1.5px solid var(--gray-200);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .med-rx   { font-size: 10.5px; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
+        .med-name { font-size: 12.5px; font-weight: 600; color: var(--gray-800); }
+        .med-dose { font-size: 11.5px; color: var(--gray-600); margin-top: 2px; }
+        .med-date { font-size: 11px; color: var(--gray-400); white-space: nowrap; text-align: right; }
+
+        /* ── RIGHT SIDEBAR ──────────────────────── */
+        .sidebar-right {
+            background: white;
+            border-left: 1px solid var(--gray-200);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .profile-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 18px 12px;
+            border-bottom: 1px solid var(--gray-100);
+        }
+        .profile-title { font-size: 14px; font-weight: 700; color: var(--navy); }
+        .btn-close {
+            width: 26px; height: 26px; border-radius: 6px;
+            border: none; background: var(--gray-100);
+            cursor: pointer; font-size: 14px; color: var(--gray-600);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .profile-avatar-wrap {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px 18px 14px;
+            gap: 10px;
+        }
+        .profile-avatar {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--teal), var(--blue));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 800; color: white;
+            box-shadow: 0 4px 16px rgba(14,165,233,.3);
+        }
+        .profile-name { font-size: 15px; font-weight: 700; color: var(--navy); text-align: center; }
+        .profile-status {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 12px; font-weight: 600; color: var(--green);
+        }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+        .btn-share {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--blue-lt); color: var(--blue);
+            border: 1.5px solid var(--blue-md);
+            border-radius: 20px; padding: 7px 18px;
+            font-size: 12px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all .15s;
+        }
+        .btn-share:hover { background: var(--blue-md); }
+
+        .profile-section { padding: 14px 18px; border-top: 1px solid var(--gray-100); }
+        .profile-section-title { font-size: 11.5px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; }
+
+        .bio-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 12.5px; }
+        .bio-label { color: var(--gray-400); font-weight: 500; min-width: 76px; }
+        .bio-value { color: var(--gray-800); font-weight: 600; }
+
+        .complaints-box {
+            min-height: 60px;
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12.5px;
+            color: var(--gray-600);
+        }
+
+        .contact-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12.5px; }
+        .contact-icon {
+            width: 28px; height: 28px; border-radius: 8px;
+            background: var(--blue-lt); display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-video {
+            position: fixed; bottom: 24px; right: 24px;
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--blue);
+            border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 16px rgba(37,99,235,.4);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .btn-video:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(37,99,235,.5); }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="logo"><span>S</span>phaira</div>
+    <div class="nav-right">
+        <a asp-area="TeleDashboard" asp-controller="Home" asp-action="Index" class="btn-back">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+            Back to List
+        </a>
+    </div>
+</nav>
+
+<div class="layout">
+
+    <!-- LEFT SIDEBAR: Chat List -->
+    <aside class="sidebar-left">
+    <div class="search-wrap">
+        <input class="search-input" type="text" 
+               placeholder="Search for" 
+               id="sidebarSearch" 
+               oninput="filterSidebar()" />
+    </div>
+   <div class="chat-list" id="chatList">
+    @foreach (var p in ViewBag.PatientList)
+    {
+        var pName = (string)(p.PatientName ?? $"{p.FirstName} {p.LastName}");
+        pName = string.IsNullOrWhiteSpace(pName) ? "?" : pName.Trim();
+        var nameParts = pName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var initials = nameParts.Length >= 2
+                ? $"{nameParts[0][0]}{nameParts[nameParts.Length - 1][0]}"
+                : (nameParts.Length == 1 && nameParts[0].Length > 0
+                ? nameParts[0][0].ToString()
+                : "?");
+        var isActive = (string)p.AppointmentNo == (string)ViewBag.CurrentAptNo;
+        var timeStr = ((DateTime)p.AppointmentDateTime).ToString("HH:mm");
+        var dateStr = ((DateTime)p.AppointmentDateTime).ToString("dd MMM");
+
+        <a href="?appointmentNo=@p.AppointmentNo"
+           class="chat-item @(isActive ? "active" : "")"
+           data-name="@pName.ToLower()"
+           style="text-decoration:none; color:inherit;">
+            <div class="chat-avatar" style="background: @(isActive ? "linear-gradient(135deg,var(--teal),var(--blue))" : "linear-gradient(135deg,#94A3B8,#64748B)")">
+                @initials.ToUpper()
+            </div>
+            <div class="chat-info">
+                <div class="chat-name">@pName</div>
+                <div class="chat-msg">@p.AppointmentNo</div>
+            </div>
+            <div class="chat-time">
+                @timeStr<br/>
+                <span style="font-size:9.5px">@dateStr</span>
+            </div>
+            @if (isActive)
+            {
+                <div class="chat-dot"></div>
+            }
+        </a>
+    }
+</div>
+</aside>
+
+    <!-- CENTER: SOAP + Vitals + Medication -->
+    <main class="center">
+
+        <!-- Progress Note -->
+        <div class="section-card">
+            <div class="section-header">
+                Progress Note / Chief Complaint
+                <span class="created-by">Created By: Dr. Oppenheimer</span>
+            </div>
+            <div class="soap-grid">
+                <div class="soap-cell">
+                    <div class="soap-label">Subjective</div>
+                    <textarea class="soap-textarea" placeholder="Patient's subjective complaints..."></textarea>
+                </div>
+                <div class="soap-cell">
+                    <div class="soap-label">Objective</div>
+                    <textarea class="soap-textarea" placeholder="Objective findings..."></textarea>
+                </div>
+                <div class="soap-cell">
+                    <div class="soap-label">Assessment</div>
+                    <textarea class="soap-textarea" placeholder="Clinical assessment..."></textarea>
+                </div>
+                <div class="soap-cell">
+                    <div class="soap-label">Plan</div>
+                    <textarea class="soap-textarea" placeholder="Treatment plan..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vital Signs -->
+        <div class="section-card">
+            <div class="section-header">Vital Sign</div>
+            <div class="vital-grid">
+                <div class="vital-card blood-sugar">
+                    <div class="vital-label">Blood Sugar</div>
+                    <div class="vital-value">80 <span class="vital-unit">mg/dL</span></div>
+                    <div class="vital-status normal">Normal</div>
+                    <svg class="sparkline" width="50" height="24" viewBox="0 0 50 24">
+                        <polyline points="0,20 10,15 20,18 30,8 40,12 50,6" fill="none" stroke="#D97706" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="vital-card heart-rate">
+                    <div class="vital-label">Heart Rate</div>
+                    <div class="vital-value">98 <span class="vital-unit">bpm</span></div>
+                    <div class="vital-status normal">Normal</div>
+                    <svg class="sparkline" width="50" height="24" viewBox="0 0 50 24">
+                        <polyline points="0,12 8,4 12,20 16,4 20,12 30,10 40,14 50,8" fill="none" stroke="#F43F5E" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="vital-card blood-press">
+                    <div class="vital-label">Blood Pressure</div>
+                    <div class="vital-value">102 <span class="vital-unit">mmHg</span></div>
+                    <div class="vital-status warning">Warning</div>
+                    <svg class="sparkline" width="50" height="24" viewBox="0 0 50 24">
+                        <polyline points="0,16 10,10 20,14 30,6 40,10 50,4" fill="none" stroke="#7C3AED" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="vital-card body-temp">
+                    <div class="vital-label">Body Temperature</div>
+                    <div class="vital-value">99 <span class="vital-unit">°F</span></div>
+                    <div class="vital-status normal">Normal</div>
+                    <svg class="sparkline" width="50" height="24" viewBox="0 0 50 24">
+                        <polyline points="0,18 10,14 20,16 30,10 40,13 50,9" fill="none" stroke="#16A34A" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="vital-card resp-rate">
+                    <div class="vital-label">Respiratory Rate</div>
+                    <div class="vital-value">15 <span class="vital-unit">/min</span></div>
+                    <div class="vital-status normal">Normal</div>
+                    <svg class="sparkline" width="50" height="24" viewBox="0 0 50 24">
+                        <polyline points="0,14 10,10 20,16 30,8 40,12 50,6" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medication -->
+        <div class="section-card">
+            <div class="section-header">Medication</div>
+            <div class="med-list">
+                <div class="med-item">
+                    <div>
+                        <div class="med-rx">Prescription No: EMR-@Model.AppointmentNo-001</div>
+                        <div class="med-name">Amoxicillin 500mg Capsule</div>
+                        <div class="med-dose">3x1 — 10 days · Oral</div>
+                    </div>
+                    <div class="med-date">Start: @Model.AppointmentDateTime.ToString("dd MMM yyyy")</div>
+                </div>
+                <div class="med-item">
+                    <div>
+                        <div class="med-rx">Prescription No: EMR-@Model.AppointmentNo-002</div>
+                        <div class="med-name">Paracetamol 500mg Tablet</div>
+                        <div class="med-dose">3x1 — 5 days · Oral · If needed</div>
+                    </div>
+                    <div class="med-date">Start: @Model.AppointmentDateTime.ToString("dd MMM yyyy")</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- RIGHT SIDEBAR: Profile -->
+    <aside class="sidebar-right">
+        <div class="profile-header">
+            <span class="profile-title">Profile</span>
+            <button class="btn-close" onclick="history.back()">✕</button>
+        </div>
+
+        <div class="profile-avatar-wrap">
+            <div class="profile-avatar">
+                @(patientName.Length > 0 ? patientName[0].ToString().ToUpper() : "?")
+            </div>
+            <div class="profile-name">@patientName</div>
+            <div class="profile-status">
+                <div class="status-dot"></div> Online
+            </div>
+            <button class="btn-share" onclick="openShare()">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                    <path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                </svg>
+                Share Contact
+            </button>
+        </div>
+
+        <div class="profile-section">
+            <div class="profile-section-title">Biodata</div>
+            <div class="bio-row">
+                <span class="bio-label">Apt. No</span>
+                <span class="bio-value">@Model.AppointmentNo</span>
+            </div>
+            <div class="bio-row">
+                <span class="bio-label">Apt. Date</span>
+                <span class="bio-value">@Model.AppointmentDateTime.ToString("dd/MM/yyyy")</span>
+            </div>
+            <div class="bio-row">
+                <span class="bio-label">Workstation</span>
+                <span class="bio-value">@(Model.WorkStationCode ?? "-")</span>
+            </div>
+            <div class="bio-row">
+                <span class="bio-label">Visit Type</span>
+                <span class="bio-value">@(Model.VisitTypeCode ?? "-")</span>
+            </div>
+            <div class="bio-row">
+                <span class="bio-label">Medical No</span>
+                <span class="bio-value">@(Model.MedicalNo ?? "-")</span>
+            </div>
+        </div>
+
+@*        <div class="profile-section">
+    <div class="profile-section-title">Video Call Link</div>
+    <div style="display:flex; align-items:center; gap:8px;">
+            <input readonly value="https://meet.jit.si/Sphaira-@(Model.AppointmentNo.Replace("/", "-").Replace(" ", ""))"
+                   style="flex:1; padding:8px 10px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:11.5px; background:var(--gray-100);"
+                   id="meetLink" />
+            <button onclick="copyLink()" style="
+                padding:8px 12px; background:var(--blue); color:white;
+                border:none; border-radius:8px; font-size:12px; font-weight:600;
+                cursor:pointer; white-space:nowrap;
+            ">Copy Link</button>
+        </div>
+    </div> *@
+    
+    <script>
+        function copyLink() {
+            const input = document.getElementById('meetLink');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+        }
+    </script>
+
+        <div class="profile-section">
+            <div class="profile-section-title">Contact</div>
+            @if (!string.IsNullOrWhiteSpace(Model.MobilePhoneNo) || !string.IsNullOrWhiteSpace(Model.PhoneNo))
+            {
+                <div class="contact-row">
+                    <div class="contact-icon">
+                        <svg width="14" height="14" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/>
+                        </svg>
+                    </div>
+                    <span style="font-size:12.5px; color:var(--gray-800)">@(string.IsNullOrWhiteSpace(Model.MobilePhoneNo) ? Model.PhoneNo : Model.MobilePhoneNo)</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.EmailAddress))
+            {
+                <div class="contact-row">
+                    <div class="contact-icon">
+                        <svg width="14" height="14" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                    </div>
+                    <span style="font-size:12.5px; color:var(--gray-800)">@Model.EmailAddress</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Address))
+            {
+                <div class="contact-row" style="align-items:flex-start">
+                    <div class="contact-icon" style="margin-top:2px">
+                        <svg width="14" height="14" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                    </div>
+                    <span style="font-size:12px; color:var(--gray-600); line-height:1.5">@Model.Address</span>
+                </div>
+            }
+        </div>
+    </aside>
+
+</div>
+
+<!-- POP UP SHARE CONTACT-->
+<!-- Share Contact Modal -->
+<div id="shareModal" style="display:none; position:fixed; inset:0; z-index:2000;
+     background:rgba(0,0,0,.5); backdrop-filter:blur(4px);
+     align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; width:320px;
+                box-shadow:0 8px 40px rgba(0,0,0,.3); overflow:hidden;">
+        
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#1B3A6B,#2563EB);
+                    padding:20px; text-align:center; position:relative;">
+            <button onclick="closeShare()" style="position:absolute; top:12px; right:12px;
+                background:rgba(255,255,255,.2); border:none; color:white;
+                width:28px; height:28px; border-radius:8px; cursor:pointer; font-size:14px;">✕</button>
+            <div style="width:72px; height:72px; border-radius:50%;
+                        background:rgba(255,255,255,.2); border:3px solid rgba(255,255,255,.5);
+                        display:flex; align-items:center; justify-content:center;
+                        font-size:26px; font-weight:800; color:white; margin:0 auto 10px;">
+                @(patientName.Length > 0 ? patientName[0].ToString().ToUpper() : "?")
+            </div>
+            <div style="color:white; font-size:15px; font-weight:700;">@patientName</div>
+            <div style="color:rgba(255,255,255,.7); font-size:11.5px; margin-top:4px;">Patient</div>
+        </div>
+
+        <!-- Contact Info -->
+        <div style="padding:16px 20px; display:flex; flex-direction:column; gap:12px;">
+            
+            @if (!string.IsNullOrWhiteSpace(Model.MobilePhoneNo))
+            {
+                <div style="display:flex; align-items:center; gap:12px; padding:10px;
+                            background:#F1F5F9; border-radius:10px;">
+                    <div style="width:36px; height:36px; background:#EFF6FF; border-radius:8px;
+                                display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="16" height="16" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24">
+                            <rect x="5" y="2" width="14" height="20" rx="2"/>
+                            <line x1="12" y1="18" x2="12" y2="18" stroke-linecap="round" stroke-width="3"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size:10.5px; color:#94A3B8; font-weight:600;">Mobile Phone</div>
+                        <div style="font-size:13px; font-weight:600; color:#1E293B;">@Model.MobilePhoneNo.Trim()</div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.PhoneNo))
+            {
+                <div style="display:flex; align-items:center; gap:12px; padding:10px;
+                            background:#F1F5F9; border-radius:10px;">
+                    <div style="width:36px; height:36px; background:#EFF6FF; border-radius:8px;
+                                display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="16" height="16" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size:10.5px; color:#94A3B8; font-weight:600;">Phone</div>
+                        <div style="font-size:13px; font-weight:600; color:#1E293B;">@Model.PhoneNo.Trim()</div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.EmailAddress))
+            {
+                <div style="display:flex; align-items:center; gap:12px; padding:10px;
+                            background:#F1F5F9; border-radius:10px;">
+                    <div style="width:36px; height:36px; background:#EFF6FF; border-radius:8px;
+                                display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="16" height="16" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size:10.5px; color:#94A3B8; font-weight:600;">Email</div>
+                        <div style="font-size:13px; font-weight:600; color:#1E293B;">@Model.EmailAddress</div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.Address))
+            {
+                <div style="display:flex; align-items:flex-start; gap:12px; padding:10px;
+                            background:#F1F5F9; border-radius:10px;">
+                    <div style="width:36px; height:36px; background:#EFF6FF; border-radius:8px;
+                                display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;">
+                        <svg width="16" height="16" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size:10.5px; color:#94A3B8; font-weight:600;">Address</div>
+                        <div style="font-size:12.5px; font-weight:600; color:#1E293B; line-height:1.5;">@Model.Address</div>
+                    </div>
+                </div>
+            }
+
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:0 20px 20px;">
+            <button onclick="closeShare()" style="width:100%; padding:10px;
+                background:#1B3A6B; color:white; border:none; border-radius:10px;
+                font-size:13px; font-weight:600; font-family:inherit; cursor:pointer;">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Video Call Button -->
+<!-- Modal Video Call -->
+<div id="videoModal" style="
+    display:none; position:fixed; inset:0; z-index:1000;
+    background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+    align-items:center; justify-content:center;
+">
+    <div style="
+        background:white; border-radius:16px; overflow:hidden;
+        width:90vw; max-width:900px; height:80vh;
+        display:flex; flex-direction:column; box-shadow:0 8px 40px rgba(0,0,0,.4);
+    ">
+        <div style="
+            padding:14px 18px; background:var(--navy);
+            display:flex; align-items:center; justify-content:space-between;
+        ">
+            <div style="color:white; font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px;">
+                <svg width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                    <polygon points="23 7 16 12 23 17 23 7"/>
+                    <rect x="1" y="5" width="15" height="14" rx="2"/>
+                </svg>
+                Video Call — @patientName
+            </div>
+            <button onclick="closeVideo()" style="
+                background:rgba(255,255,255,.15); border:none; color:white;
+                width:30px; height:30px; border-radius:8px; cursor:pointer;
+                font-size:16px; display:flex; align-items:center; justify-content:center;
+            ">✕</button>
+        </div>
+        <div id="jitsiContainer" style="flex:1;"></div>
+    </div>
+</div>
+
+
+        @{
+            var phone = string.Empty;
+            if (!string.IsNullOrWhiteSpace(Model.PhoneNo))
+            {
+                phone = Model.PhoneNo.Trim();
+            }else if(!string.IsNullOrWhiteSpace(Model.MobilePhoneNo)){
+                 phone = Model.MobilePhoneNo.Trim();
+            }
+        
+            //var phone = (Model.MobilePhoneNo ?? Model.PhoneNo ?? "").Trim();
+    // Normalisasi nomor: 08xx → 628xx
+    if (phone.StartsWith("0"))
+        phone = "62" + phone.Substring(1);
+    // Hapus karakter non-digit
+    phone = new string(phone.Where(char.IsDigit).ToArray());
+}
+
+@if (!string.IsNullOrWhiteSpace(phone))
+{
+    <a href="https://web.whatsapp.com/send?phone=@phone" onclick="window.open(this.href,'whatsapp','width=1000,height=700'); return false;" target="_blank" class="btn-video" title="WhatsApp Video Call">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.564 4.14 1.548 5.876L.057 23.428a.75.75 0 0 0 .916.916l5.552-1.491A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.73 9.73 0 0 1-4.953-1.354l-.355-.21-3.673.987.988-3.588-.23-.368A9.718 9.718 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+        </svg>
+    </a>
+}
+else
+{
+    <button class="btn-video" title="No phone number" style="opacity:.5; cursor:not-allowed" disabled>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.564 4.14 1.548 5.876L.057 23.428a.75.75 0 0 0 .916.916l5.552-1.491A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.73 9.73 0 0 1-4.953-1.354l-.355-.21-3.673.987.988-3.588-.23-.368A9.718 9.718 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+        </svg>
+    </button>
+}
+
+
+@* <button class="btn-video" onclick="openVideo()" title="Video Call">
+    <svg width="20" height="20" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="23 7 16 12 23 17 23 7"/>
+        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+    </svg>
+</button>
+
+<script src="https://meet.jit.si/external_api.js"></script>
+<script>
+    let jitsiApi = null;
+
+    // Bikin room name unik dari AppointmentNo (hapus karakter special)
+    const roomName = "Sphaira-@(Model.AppointmentNo.Replace("/", "-").Replace(" ", ""))";
+
+    function openVideo() {
+        const modal = document.getElementById('videoModal');
+        modal.style.display = 'flex';
+
+        // Init Jitsi hanya sekali
+        if (jitsiApi) return;
+
+        jitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
+            roomName: roomName,
+            parentNode: document.getElementById('jitsiContainer'),
+            width: "100%",
+            height: "100%",
+            userInfo: {
+                displayName: "Dr. Oppenheimer"
+            },
+            configOverwrite: {
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+                prejoinPageEnabled: false,       // langsung masuk tanpa konfirmasi
+                disableDeepLinking: true,
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: [
+                    'microphone', 'camera', 'hangup',
+                    'chat', 'raisehand', 'tileview', 'fullscreen'
+                ],
+                SHOW_JITSI_WATERMARK: false,
+                SHOW_BRAND_WATERMARK: false,
+            }
+        });
+
+        // Auto close modal kalau hangup
+        jitsiApi.addEventListener('readyToClose', () => {
+            closeVideo();
+        });
+    }
+
+    function closeVideo() {
+        document.getElementById('videoModal').style.display = 'none';
+        if (jitsiApi) {
+            jitsiApi.dispose();
+            jitsiApi = null;
+            document.getElementById('jitsiContainer').innerHTML = '';
+        }
+    }
+
+    // Tutup modal kalau klik di luar
+    document.getElementById('videoModal').addEventListener('click', function(e) {
+        if (e.target === this) closeVideo();
+    });
+</script> *@
+
+<script>
+    function openShare() {
+    document.getElementById('shareModal').style.display = 'flex';
+}
+function closeShare() {
+    document.getElementById('shareModal').style.display = 'none';
+}
+document.getElementById('shareModal').addEventListener('click', function(e) {
+    if (e.target === this) closeShare();
+});
+
+function filterSidebar() {
+    const q = document.getElementById('sidebarSearch').value.toLowerCase();
+    document.querySelectorAll('#chatList .chat-item').forEach(item => {
+        item.style.display = item.dataset.name.includes(q) ? '' : 'none';
+    });
+}
+</script>
+
+</body>
+</html>
