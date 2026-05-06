@@ -1,6 +1,4 @@
-﻿using TeleMedichineProject.Models;
-using TeleMedichineProject.Models.Common;
-using TeleMedichineProject.Services;
+﻿using TeleMedichineProject.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,8 +8,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using TeleMedichineProject.Common;
-using MasterPageTest.Models;
+using TeleMedichineProject.Models;
 using TeleMedichineProject.Models.TeleClass;
+using TeleMedichineProject.Models.Common;
 
 namespace TeleMedichineProject.Controllers
 {
@@ -38,14 +37,14 @@ namespace TeleMedichineProject.Controllers
         [HttpGet]
         public IActionResult Index()
         {
-            return View("~/Views/Shared/Login.cshtml");
+            return View("~/Views/Account/Login.cshtml");
         }
 
         [HttpPost]
         public async Task<IActionResult> PostLogin(LoginViewModel model)
         {
             if (!ModelState.IsValid)
-                return View("~/Views/Shared/Login.cshtml", model);
+                return View("~/Views/Account/Login.cshtml", model);
 
             // 1. Cek user ada atau tidak
             var user = await _commonDbContext.aspnet_Users
@@ -54,7 +53,7 @@ namespace TeleMedichineProject.Controllers
             if (user == null)
             {
                 ViewBag.Error = "User tidak ditemukan";
-                return View("~/Views/Shared/Login.cshtml", model);
+                return View("~/Views/Account/Login.cshtml", model);
             }
 
             var userId = user.UserId;
@@ -64,7 +63,7 @@ namespace TeleMedichineProject.Controllers
             if (!isPwdValid)
             {
                 ViewBag.Error = "Password salah";
-                return View("~/Views/Shared/Login.cshtml", model);
+                return View("~/Views/Account/Login.cshtml", model);
             }
 
             // 3. Validasi role
@@ -75,7 +74,7 @@ namespace TeleMedichineProject.Controllers
             if (!roles.Any())
             {
                 ViewBag.Error = "User tidak memiliki akses profile";
-                return View("~/Views/Shared/Login.cshtml", model);
+                return View("~/Views/Account/Login.cshtml", model);
             }
 
             var roleId = roles.First().RoleId;
@@ -103,7 +102,7 @@ namespace TeleMedichineProject.Controllers
             if (sysUser == null)
             {
                 ViewBag.Error = "User tidak ditemukan di system";
-                return View("~/Views/Shared/Login.cshtml", model);
+                return View("~/Views/Account/Login.cshtml", model);
             }
 
             string paramedicTypeName = null;
@@ -132,6 +131,25 @@ namespace TeleMedichineProject.Controllers
                 {
                     _appUserLogin.FullUserName = paramedic.ParamedicName.Trim();
                     _appUserLogin.ParamedicType = paramedicTypeName;
+
+                    var address = await _appDbContext.Address
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(a => a.EntityRecordID == paramedic.ParamedicCode && a.GCAddressType == "0190^H");
+                    if (address != null)
+                    {
+                        _appUserLogin.Email = address.Email1 ?? address.Email2;
+                        _appUserLogin.Address = address.Line1.Trim();
+                        _appUserLogin.PhoneNo = address.PhoneNo1 ?? address.PhoneNo2;
+                    }
+
+                    var speciality = await _appDbContext.Specialty
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(s => s.SpecialtyCode == paramedic.SpecialtyCode);
+
+                    if (speciality != null)
+                    {
+                        _appUserLogin.Specialty = speciality.SpecialtyName1.Trim();
+                    }
                 }
             }
             else

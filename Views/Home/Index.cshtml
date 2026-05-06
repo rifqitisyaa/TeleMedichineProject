@@ -350,18 +350,90 @@
 
     <!-- NAVBAR -->
     <nav class="navbar">
-        <div class="navbar-left">
-            <div class="logo"><span>S</span>phaira</div>
-            <div class="welcome-text">Welcome back, <strong>Dr. Oppenheimer</strong></div>
-        </div>
-        <div class="navbar-right">
-            <a href="#" class="nav-link">Patients</a>
-            <button class="btn-profile">
-                <div class="avatar">JO</div>
+    <div class="navbar-left">
+        <div class="logo"><span>S</span>phaira</div>
+        <div class="welcome-text">Welcome back, <strong>@User.Identity?.Name</strong></div>
+    </div>
+    <div class="navbar-right">
+        <a href="#" class="nav-link">Patients</a>
+        
+        <!-- Profile Dropdown -->
+        <div style="position:relative;">
+            <button class="btn-profile" onclick="toggleProfile()" type="button">
+                <div class="avatar">@(User.Identity?.Name?.Length > 0 ? User.Identity.Name.Substring(0,2).ToUpper() : "DR")</div>
                 Profile
             </button>
+
+            <div id="profileDropdown" style="display:none; position:absolute; top:52px; right:0;
+     width:260px; background:white; border-radius:14px;
+     border:1px solid #E2E8F0; box-shadow:0 8px 24px rgba(0,0,0,.12);
+     z-index:999; overflow:hidden;">
+
+    <!-- Close -->
+    <button onclick="toggleProfile()" type="button" style="position:absolute; top:10px; right:10px;
+        width:26px; height:26px; border-radius:6px; border:none;
+        background:#F1F5F9; color:#64748B; cursor:pointer; font-size:13px;
+        display:flex; align-items:center; justify-content:center;">✕</button>
+
+    <!-- Avatar & Name -->
+    <div style="background:#1B3A6B; padding:28px 20px 20px; text-align:center;">
+        <div style="width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,0.2);
+                    border:2px solid rgba(255,255,255,0.4);
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:22px; font-weight:800; color:white; margin:0 auto 10px;">
+            @(User.Identity?.Name?.Length > 0 ? User.Identity.Name.Substring(0,1).ToUpper() : "D")
         </div>
-    </nav>
+        <div style="font-size:14px; font-weight:700; color:white;">
+            @(User.FindFirst("FullUserName")?.Value ?? User.Identity?.Name ?? "-")
+        </div>
+        <div style="font-size:11.5px; color:rgba(255,255,255,0.6); margin-top:3px;">
+            @(User.FindFirst("Specialty")?.Value ?? "Staff")
+        </div>
+    </div>
+
+    <!-- Info -->
+    <div style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px;
+                    background:#F8FAFC; border-radius:10px;">
+            <svg width="15" height="15" fill="none" stroke="#2563EB" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0; margin-top:2px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <div>
+                <div style="font-size:10.5px; color:#94A3B8; font-weight:600;">Email</div>
+                <div style="font-size:12.5px; color:#1E293B; font-weight:500; margin-top:2px;">
+                    @(User.FindFirst("Email")?.Value ?? "-")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout -->
+    <div style="padding:0 16px 16px;">
+        <form asp-controller="Login" asp-action="Logout" method="post" id="logoutForm">
+            @Html.AntiForgeryToken()
+            <button type="submit" style="width:100%; padding:11px; background:#1B3A6B; color:white;
+                border:none; border-radius:10px; font-size:13px; font-weight:700;
+                font-family:inherit; cursor:pointer;">
+                Logout
+            </button>
+        </form>
+    </div>
+</div>
+        </div>
+    </div>
+</nav>
+
+<script>
+function toggleProfile() {
+    const dd = document.getElementById('profileDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('profileDropdown');
+    if (!e.target.closest('[onclick="toggleProfile()"]') && dd.style.display === 'block') {
+        dd.style.display = 'none';
+    }
+});
+</script>
 
     <!-- MAIN -->
     <main class="main">
@@ -494,7 +566,21 @@
         </div>
     </main>
 
+    
+
     <script>
+function toggleProfile() {
+    const dd = document.getElementById('profileDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('profileDropdown');
+    if (!e.target.closest('[onclick="toggleProfile()"]') && dd.style.display === 'block') {
+        dd.style.display = 'none';
+    }
+});
+
             function filterTable() {
                 const search  = document.getElementById('searchInput').value.toLowerCase();
                 const station = document.getElementById('filterSelect').value;

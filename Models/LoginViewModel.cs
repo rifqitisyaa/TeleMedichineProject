@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace MasterPageTest.Models
+namespace TeleMedichineProject.Models
 {
     public class LoginViewModel
     {

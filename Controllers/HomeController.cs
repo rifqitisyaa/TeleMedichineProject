@@ -1,17 +1,20 @@
-﻿using TeleMedichineProject.Models.TeleClass;
+﻿
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TeleMedichineProject.Helpers;
 using TeleMedichineProject.Models;
+using TeleMedichineProject.Models.TeleClass;
+using Microsoft.AspNetCore.Authorization;
 
 
-namespace MasterPageTest.TeleDashboard.Controllers
+namespace TeleMedichineProject.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
-        private readonly AppDbContext _db;
+        private readonly ErcDbContext _db;
 
-        public HomeController(AppDbContext db)
+        public HomeController(ErcDbContext db)
         {
             _db = db;
         }
@@ -19,7 +22,7 @@ namespace MasterPageTest.TeleDashboard.Controllers
         {
             int pageSize = 10;
 
-            var query = _db.Appointments.AsQueryable();
+            var query = _db.Appointment.AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
                 query = query.Where(a =>
@@ -41,7 +44,7 @@ namespace MasterPageTest.TeleDashboard.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            ViewBag.Workstations = await _db.Appointments
+            ViewBag.Workstations = await _db.Appointment
                 .Where(a => !a.IsDeleted && a.WorkStationCode != null)
                 .Select(a => a.WorkStationCode!)
                 .Distinct().ToListAsync();
@@ -58,12 +61,12 @@ namespace MasterPageTest.TeleDashboard.Controllers
         {
             var decrypted = EncryptHelper.Decrypt(appointmentNo);
 
-            var appointment = await _db.Appointments
+            var appointment = await _db.Appointment
          .FirstOrDefaultAsync(a => a.AppointmentNo == decrypted && !a.IsDeleted);
 
             if (appointment == null) return NotFound();
 
-            var patientList = await _db.Appointments
+            var patientList = await _db.Appointment
     .Where(a => !a.IsDeleted)
     .OrderByDescending(a => a.AppointmentDateTime)
     .ToListAsync();

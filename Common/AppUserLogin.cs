@@ -78,6 +78,31 @@ namespace TeleMedichineProject.Common
             set => Session.SetString("User:sdid", value.ToString());
         }
 
+        public string Email
+        {
+            get => Session.GetString("User:email") ?? string.Empty;
+            set => Session.SetString("User:email", value);
+        }
+
+        public string Address
+        {
+            get => Session.GetString("User:address") ?? string.Empty;
+            set => Session.SetString("User:address", value);
+        }
+
+        public string PhoneNo
+        {
+            get => Session.GetString("User:phone") ?? string.Empty;
+            set => Session.SetString("User:phone", value);
+        }
+
+
+        public string Specialty
+        {
+            get => Session.GetString("User:Specialty") ?? string.Empty;
+            set => Session.SetString("User:Specialty", value);
+        }
+
         public int ServiceUnitID
         {
             get => int.TryParse(Session.GetString("User:suid"), out var result) ? result : 0;
