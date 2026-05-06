@@ -349,7 +349,7 @@ namespace TeleMedichineProject.Common
 
                 if (paramedic != null)
                 {
-                    this.FullUserName = paramedic.ParamedicName.Trim();
+                    this.FullUserName = paramedic.ParamedicName.Trim() + "----";
                     this.ParamedicType = paramedicTypeName;
                 }
             }

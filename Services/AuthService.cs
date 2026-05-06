@@ -20,6 +20,10 @@ namespace TeleMedichineProject.Services
             context.Response.Cookies.Append("SessionID", sid ?? context.Session.Id);
             context.Response.Cookies.Append("UserName", user.UserName ?? "");
             context.Response.Cookies.Append("FullUserName", user.FullUserName ?? "");
+            context.Response.Cookies.Append("Email", user.Email ?? "");
+            context.Response.Cookies.Append("Specialty", user.Specialty ?? "");
+            context.Response.Cookies.Append("Address", user.Address ?? "");
+            context.Response.Cookies.Append("PhoneNo", user.PhoneNo ?? "");
             context.Response.Cookies.Append("RoleID", user.RoleID.ToString());
             context.Response.Cookies.Append("ServiceUnitID", user.ServiceUnitID.ToString());
 
@@ -30,7 +34,12 @@ namespace TeleMedichineProject.Services
                 new Claim("DoctorId", user.ParamedicId.ToString()),
                 new Claim("RoleID", user.RoleID.ToString()),
                 new Claim("ServiceUnitID", user.ServiceUnitID.ToString()),
-                new Claim("FullUserName", user.FullUserName ?? "")
+                new Claim("FullUserName", user.FullUserName ?? ""),
+
+                new Claim("Email", user.Email.ToString()),
+                new Claim("Specialty", user.Specialty.ToString()),
+                new Claim("PhoneNo", user.PhoneNo.ToString()),
+                new Claim("Address", user.Address ?? "")
             };
 
             var identity = new ClaimsIdentity(

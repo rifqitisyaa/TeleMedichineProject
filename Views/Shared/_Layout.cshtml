@@ -11,39 +11,114 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">TeleMedichineProject</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
+    <!-- Timeout Modal -->
+    <div id="timeoutModal" style="display:none; position:fixed; inset:0; z-index:9999;
+        background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
+        align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; width:360px;
+            box-shadow:0 8px 40px rgba(0,0,0,.3); overflow:hidden;">
+            <div style="background:#1B3A6B; padding:24px; text-align:center;">
+                <div style="width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,0.15);
+                    display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+                    <svg width="26" height="26" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                </div>
+                <div style="color:white; font-size:16px; font-weight:700;">Sesi Berakhir</div>
+                <div style="color:rgba(255,255,255,0.7); font-size:12.5px; margin-top:6px;">
+                    Anda tidak aktif selama 10 menit
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+            <div style="padding:20px; text-align:center;">
+                <div style="font-size:13px; color:#475569; line-height:1.6; margin-bottom:20px;">
+                    Sesi Anda telah berakhir karena tidak ada aktivitas.
+                    Silakan login kembali untuk melanjutkan.
+                </div>
+                <div id="timeoutCountdown" style="font-size:13px; color:#EF4444; font-weight:600; margin-bottom:16px;"></div>
+                <div style="display:flex; gap:10px;">
+                <button onclick="continueSession()" style="flex:1; padding:12px; background:#22C55E;
+                    color:white; border:none; border-radius:10px; font-size:14px;
+                    font-weight:700; font-family:inherit; cursor:pointer;">
+                    Lanjutkan
+                </button>
+                <form asp-controller="Login" asp-action="Logout" method="post" id="timeoutLogoutForm">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" style="width:100%; padding:12px; background:#1B3A6B;
+                        color:white; border:none; border-radius:10px; font-size:14px;
+                        font-weight:700; font-family:inherit; cursor:pointer;">
+                        Login Kembali
+                    </button>
+                </form>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - TeleMedichineProject - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
+            @RenderBody()
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <script>
+        
+                    let idleTimer = null;
+                    let countdownTimer = null;
+
+                       (function () {
+                    const IDLE_MINUTES = 10;
+                    const COUNTDOWN_SECONDS = 50;
+                    let countdownValue = COUNTDOWN_SECONDS;
+
+
+                            window._resetIdleTimer = function() {
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(showTimeoutModal, IDLE_MINUTES * 60 * 1000);
+            }
+
+                    function showTimeoutModal() {
+                        document.getElementById('timeoutModal').style.display = 'flex';
+                        startCountdown();
+                    }
+
+                    function startCountdown() {
+                        countdownValue = COUNTDOWN_SECONDS;
+                        updateCountdownText();
+
+                        countdownTimer = setInterval(() => {
+                            countdownValue--;
+                            updateCountdownText();
+
+                            if (countdownValue <= 0) {
+                                clearInterval(countdownTimer);
+                                document.getElementById('timeoutLogoutForm').submit();
+                            }
+                        }, 1000);
+                    }
+
+
+                    function updateCountdownText() {
+                        document.getElementById('timeoutCountdown').textContent =
+                            `Otomatis logout dalam ${countdownValue} detik...`;
+                    }
+
+                    window.continueSession = continueSession;
+
+                    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(event => {
+                        document.addEventListener(event, () => {
+                            if (document.getElementById('timeoutModal').style.display === 'flex') return;
+                            window._resetIdleTimer();
+                        });
+                    });
+
+                    window._resetIdleTimer();
+                })();
+
+                  function continueSession() {
+                document.getElementById('timeoutModal').style.display = 'none';
+                clearInterval(countdownTimer);
+                resetIdleTimer();
+            }
+        </script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)

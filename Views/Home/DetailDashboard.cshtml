@@ -1,8 +1,8 @@
-﻿@model TeleMedichineProject.Models.TeleClass.Appointment
+﻿@model TeleMedichineProject.Models.DetailDashboardModel
 @using TeleMedichineProject.Helpers;
 @{
     ViewData["Title"] = "Appointment Detail";
-    Layout = null;
+    Layout = "_Layout";
     var patientName = Model.PatientName ?? $"{Model.FirstName} {Model.MiddleName} {Model.LastName}".Trim();
 }
 <!DOCTYPE html>
@@ -365,7 +365,7 @@
                oninput="filterSidebar()" />
     </div>
    <div class="chat-list" id="chatList">
-    @foreach (var p in ViewBag.PatientList)
+    @foreach (var p in ViewBag.PatientListWithRegistration)
     {
         var pName = (string)(p.PatientName ?? $"{p.FirstName} {p.LastName}");
         pName = string.IsNullOrWhiteSpace(pName) ? "?" : pName.Trim();
@@ -410,7 +410,6 @@
         <div class="section-card">
             <div class="section-header">
                 Progress Note / Chief Complaint
-                <span class="created-by">Created By: Dr. Oppenheimer</span>
             </div>
             <div class="soap-grid">
                 <div class="soap-cell">
@@ -516,9 +515,7 @@
                 @(patientName.Length > 0 ? patientName[0].ToString().ToUpper() : "?")
             </div>
             <div class="profile-name">@patientName</div>
-            <div class="profile-status">
-                <div class="status-dot"></div> Online
-            </div>
+           
             <button class="btn-share" onclick="openShare()">
                 <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -530,21 +527,23 @@
 
         <div class="profile-section">
             <div class="profile-section-title">Biodata</div>
+             <div class="bio-row">
+                <span class="bio-label">Reg. No</span>
+                <span class="bio-value">@Model.Registration</span>
+            </div>
+            <div class="bio-row">
+                <span class="bio-label">Reg. Date</span>
+                <span class="bio-value">@Model.RegistrationDateTime.ToString("dd/MM/yyyy")</span>
+            </div>
+
+
             <div class="bio-row">
                 <span class="bio-label">Apt. No</span>
                 <span class="bio-value">@Model.AppointmentNo</span>
             </div>
             <div class="bio-row">
-                <span class="bio-label">Apt. Date</span>
-                <span class="bio-value">@Model.AppointmentDateTime.ToString("dd/MM/yyyy")</span>
-            </div>
-            <div class="bio-row">
-                <span class="bio-label">Workstation</span>
-                <span class="bio-value">@(Model.WorkStationCode ?? "-")</span>
-            </div>
-            <div class="bio-row">
                 <span class="bio-label">Visit Type</span>
-                <span class="bio-value">@(Model.VisitTypeCode ?? "-")</span>
+                <span class="bio-value">@(Model.VisitTypeValue ?? "-")</span>
             </div>
             <div class="bio-row">
                 <span class="bio-label">Medical No</span>
