@@ -48,12 +48,6 @@ namespace TeleMedichineProject.Common
             set => Session.SetString("User:UserID", value.ToString());
         }
 
-        public string Password
-        {
-            get => Session.GetString("User:Password") ?? string.Empty;
-            set => Session.SetString("User:Password", value);
-        }
-
         public long LogID
         {
             get => long.TryParse(Session.GetString("User:logid"), out var result) ? result : 0;
@@ -119,6 +113,18 @@ namespace TeleMedichineProject.Common
         {
             get => Session.GetString("User:paratype") ?? string.Empty;
             set => Session.SetString("User:paratype", value);
+        }
+
+        public string ParamedicTypeCode
+        {
+            get => Session.GetString("User:paratypcode") ?? string.Empty;
+            set => Session.SetString("User:paratypcode", value);
+        }
+
+        public string ParamedicCode
+        {
+            get => Session.GetString("User:paracode") ?? string.Empty;
+            set => Session.SetString("User:paracode", value);
         }
 
         public Guid RoleID
@@ -276,7 +282,7 @@ namespace TeleMedichineProject.Common
             // Assign basic info
             this.UserID = Guid.Parse(arrQs[0]);
             this.UserName = arrQs[1];
-            this.Password = arrQs[2];
+            string password = arrQs[2];
             this.SiteCode = arrQs[3];
 
             // 1. Cek user ada atau tidak
@@ -289,7 +295,7 @@ namespace TeleMedichineProject.Common
             var userId = user.UserId;
 
             // 2. Validasi password
-            if (!ValidateLegacyUser(this.UserName, this.Password))
+            if (!ValidateLegacyUser(this.UserName, password))
                 return -2; // Password salah
 
             var roleID = Guid.Parse(arrQs[4]);
@@ -351,6 +357,8 @@ namespace TeleMedichineProject.Common
                 {
                     this.FullUserName = paramedic.ParamedicName.Trim() + "----";
                     this.ParamedicType = paramedicTypeName;
+                    this.ParamedicTypeCode = paramedic.GCParamedicType;
+                    this.ParamedicCode = paramedic.ParamedicCode;
                 }
             }
             else

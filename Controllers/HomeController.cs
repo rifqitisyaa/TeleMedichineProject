@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using TeleMedichineProject.Common;
 using TeleMedichineProject.Helpers;
 using TeleMedichineProject.Models;
@@ -56,13 +57,24 @@ namespace TeleMedichineProject.Controllers
                 .Select(a => a.WorkStationCode!)
                 .Distinct().ToListAsync();
 
+            // Join ke Paramedic
+            var workstationCodes = data
+                .Where(a => !string.IsNullOrEmpty(a.WorkStationCode))
+                .Select(a => a.WorkStationCode)
+                .Distinct()
+                .ToList();
+
+            var paramedics = await _db.Paramedic
+                .Where(p => workstationCodes.Contains(p.ParamedicCode))
+                .ToDictionaryAsync(p => p.ParamedicCode, p => p.ParamedicName);
+
+            ViewBag.Paramedics = paramedics;
             ViewBag.Search = search;
             ViewBag.Date = date;
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = totalPages;
 
 
-            // Di query Index, cek existing registration
             var appointmentNos = data.Select(a => a.AppointmentNo).ToList();
             var existingRegs = await _db.Registration
                 .Where(r => appointmentNos.Contains(r.AppointmentNo) && !r.IsDeleted)
@@ -74,6 +86,11 @@ namespace TeleMedichineProject.Controllers
                 .ToDictionary(g => g.Key, g => g.First().RegistrationNo);
 
             return View(data);
+        }
+
+        public IActionResult EmptyState()
+        {
+            return View();
         }
 
         public async Task<IActionResult> DetailDashboard(string appointmentNo)
@@ -94,21 +111,24 @@ namespace TeleMedichineProject.Controllers
             var viewmodel = new DetailDashboardModel
             {
                 AppointmentNo = appointment.AppointmentNo,
-                Registration = reg.RegistrationNo,
+                Registration = reg?.RegistrationNo,
                 PatientName = appointment.PatientName,
                 FirstName = appointment.FirstName,
                 MiddleName = appointment.MiddleName,
                 LastName = appointment.LastName,
                 AppointmentDateTime = appointment.AppointmentDateTime,
-                MedicalNo = reg.MedicalNo,
-                VisitTypeValue = vty.VisitTypeName,
+                MedicalNo = reg?.MedicalNo,
+                VisitTypeValue = vty?.VisitTypeName,
                 WorkStationCode = appointment.WorkStationCode,
                 MobilePhoneNo = appointment.MobilePhoneNo,
                 PhoneNo = appointment.PhoneNo,
                 EmailAddress = appointment.EmailAddress,
                 Address = appointment.Address,
-                RegistrationDateTime = reg.RegistrationDateTime
+                RegistrationDateTime = reg?.RegistrationDateTime
             };
+
+            var workCode = await _db.WorkStation
+                .FirstOrDefaultAsync(w => w.ParamedicID == _appUserLogin.ParamedicId);
 
             var patientList = await _db.Appointment
                 .Where(a => !a.IsDeleted)
@@ -117,17 +137,17 @@ namespace TeleMedichineProject.Controllers
 
             patientList = patientList
                 .GroupBy(a => a.PatientName ?? $"{a.FirstName} {a.LastName}".Trim())
-                .Select(g => g.First())  
-                .OrderBy(a => a.AppointmentDateTime)  
+                .Select(g => g.First())
+                .OrderBy(a => a.AppointmentDateTime)
                 .Take(20)
                 .ToList();
 
 
             var patientListReg = await (from a in _db.Appointment
-                                     join r in _db.Registration on a.AppointmentNo equals r.AppointmentNo
-                                        where !a.IsDeleted && !r.IsDeleted 
-                                     orderby a.AppointmentDateTime descending
-                                     select a)
+                                        join r in _db.Registration on a.AppointmentNo equals r.AppointmentNo
+                                        where !a.IsDeleted && !r.IsDeleted && a.WorkStationCode == workCode.WorkStationCode
+                                        orderby a.AppointmentDateTime descending
+                                        select a)
                          .ToListAsync();
 
             // Logic GroupBy dan Take tetap sama
@@ -146,15 +166,38 @@ namespace TeleMedichineProject.Controllers
             return View(viewmodel);
         }
 
+        public class SaveRegistrasiRequest
+        {
+            public string AppointmentNo { get; set; }
+            public int? SelectedParamedicId { get; set; }
+            public string? SelectedWorkStationCode { get; set; }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetDokterList()
+        {
+            var dokters = await _db.Paramedic
+                .Where(p => !p.IsDeleted && p.IsActive == true && p.GCParamedicType == "X0055^001")
+                .Select(p => new
+                {
+                    paramedicId = p.ParamedicID,
+                    paramedicName = p.ParamedicName,
+                    workStationCode = p.ParamedicCode
+                })
+                .OrderBy(p => p.paramedicName)
+                .ToListAsync();
+
+            return Json(dokters);
+        }
+
         [HttpPost]
         public async Task<IActionResult> SaveRegistrasi([FromBody] SaveRegistrasiRequest request)
         {
+            int paramedicId = 0;
             try
             {
-                // 1. Decrypt appointmentNo
                 var appointmentNo = EncryptHelper.Decrypt(request.AppointmentNo);
 
-                // 2. Ambil data appointment
                 var appointment = await _db.Appointment
                     .AsNoTracking()
                     .FirstOrDefaultAsync(a => a.AppointmentNo == appointmentNo && !a.IsDeleted);
@@ -162,7 +205,8 @@ namespace TeleMedichineProject.Controllers
                 if (appointment == null)
                     return Json(new { success = false, message = "Appointment tidak ditemukan." });
 
-                // 3. Cek apakah sudah pernah diregistrasi
+
+
                 var existingReg = await _db.Registration
                     .AsNoTracking()
                     .FirstOrDefaultAsync(r => r.AppointmentNo == appointmentNo && !r.IsDeleted);
@@ -170,10 +214,27 @@ namespace TeleMedichineProject.Controllers
                 if (existingReg != null)
                     return Json(new { success = false, message = $"Pasien sudah terdaftar dengan nomor {existingReg.RegistrationNo}." });
 
-                // 4. Ambil parameter dari sysParameter
-                var transCode = "001"; //Always
 
-                // 5. Generate RegistrationNo via uspTransactionNumber
+                var parReg = await _db.Paramedic
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(pr => pr.ParamedicCode == appointment.WorkStationCode);
+
+
+                if (parReg == null)
+                {
+                    var parnull = await _db.Paramedic
+                   .AsNoTracking()
+                   .FirstOrDefaultAsync(pr => pr.ParamedicCode == request.SelectedWorkStationCode);
+
+                    paramedicId = parnull.ParamedicID;
+                }
+                else
+                {
+                    paramedicId = parReg.ParamedicID;
+                }
+
+                var transCode = "001";
+
                 var transDate = DateTime.Now;
                 var siteCode = _appUserLogin.SiteCode;
 
@@ -181,13 +242,22 @@ namespace TeleMedichineProject.Controllers
                     .AsNoTracking()
                     .FirstOrDefaultAsync(su => su.ParameterCode == "ServiceUnitDefaultTelemedichine");
 
+                if (serviceUnitId == null)
+                    return Json(new { success = false, message = "Parameter ServiceUnitDefaultTelemedichine tidak ditemukan." });
+
                 var patientTypeId = await _db.Patient
                     .AsNoTracking()
                     .FirstOrDefaultAsync(pat => pat.MedicalNo == appointment.MedicalNo);
 
+                if (patientTypeId == null)
+                    return Json(new { success = false, message = "Data Pasien tidak ditemukan di database." });
+
                 var businessPartnerId = await _db.BusinessPartner
                     .AsNoTracking()
                     .FirstOrDefaultAsync(buid => buid.BusinessPartnerCode == patientTypeId.GCPatientCategory);
+
+                if (businessPartnerId == null)
+                    return Json(new { success = false, message = "Data Business Partner untuk kategori pasien ini tidak ditemukan." });
 
                 var regNoResult = await _db.Database
                     .SqlQueryRaw<TransactionNumberResult>(
@@ -203,7 +273,28 @@ namespace TeleMedichineProject.Controllers
                 if (string.IsNullOrEmpty(registrationNo))
                     return Json(new { success = false, message = "Gagal generate nomor registrasi." });
 
-                // 6. Simpan Registration
+
+                if (paramedicId == 0)
+                    return Json(new { success = false, message = $"Data Paramedis dengan kode {appointment.WorkStationCode} tidak ditemukan." });
+
+                if (parReg == null)
+                {
+                    var workCode = await _db.WorkStation
+                        .FirstOrDefaultAsync(wc => wc.WorkStationCode == request.SelectedWorkStationCode);
+
+                    if (workCode == null)
+                    {
+                        var workPar = await _db.Paramedic
+                        .FirstOrDefaultAsync(wp => wp.ParamedicCode == request.SelectedWorkStationCode);
+
+                        return Json(new { success = false, message = $"Data Workstation {workPar.ParamedicName} tidak ditemukan." });
+                    }
+                    appointment.WorkStationCode = request.SelectedWorkStationCode;
+
+                    _db.Appointment.Update(appointment);
+                    await _db.SaveChangesAsync();
+                }
+
                 var registration = new Registration
                 {
                     RegistrationNo = registrationNo,
@@ -213,7 +304,7 @@ namespace TeleMedichineProject.Controllers
                     AppointmentNo = appointmentNo,
                     MedicalNo = appointment.MedicalNo ?? "",
                     ServiceUnitID = Convert.ToInt16(serviceUnitId.ParameterValue),
-                    ParamedicID = _appUserLogin.ParamedicId,
+                    ParamedicID = paramedicId,
                     WorkStationCode = appointment.WorkStationCode,
                     VisitTypeCode = appointment.VisitTypeCode,
                     ClassCode = "A",   // sesuaikan
@@ -246,12 +337,51 @@ namespace TeleMedichineProject.Controllers
             }
         }
 
-    }
-    public class SaveRegistrasiRequest
-    {
-        public string AppointmentNo { get; set; }
-    }
+        [HttpGet]
+        public async Task<IActionResult> GetRegistrationDetail(string registrationNo)
+        {
+            if (string.IsNullOrEmpty(registrationNo))
+                return Json(new { success = false, message = "Registration No kosong" });
 
+
+            var reg = await _db.Registration
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RegistrationNo == registrationNo && !r.IsDeleted);
+
+            if (reg == null)
+            {
+                return Json(new { success = false, message = $"Registrasi {registrationNo} tidak ditemukan" });
+            }
+
+            var appointment = await _db.Appointment
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.AppointmentNo == reg.AppointmentNo && !a.IsDeleted);
+
+            var patientName = appointment?.PatientName
+                ?? $"{appointment?.FirstName} {appointment?.LastName}".Trim()
+                ?? "-";
+
+            var detailUrl = Url.Action("DetailDashboard", "Home",
+                new { appointmentNo = EncryptHelper.Encrypt(reg.AppointmentNo) });
+
+            return Json(new
+            {
+                success = true,
+                registrationNo = reg.RegistrationNo,
+                registrationDate = reg.RegistrationDateTime.ToString("dd MMM yyyy HH:mm"),
+                patientName = patientName,
+                detailUrl = detailUrl
+            });
+        }
+
+    }
+    public class SaveSoapRequest
+    {
+        public string Subjective { get; set; }
+        public string Objective { get; set; }
+        public string Assessment { get; set; }
+        public string Plan { get; set; }
+    }
     public class TransactionNumberResult
     {
         public string TransactionNumber { get; set; } // sesuaikan nama kolom return SP

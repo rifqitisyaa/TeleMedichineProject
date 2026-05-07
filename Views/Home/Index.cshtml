@@ -4,6 +4,7 @@
     ViewData["Title"] = "Patients Appointment List";
     Layout = "_Layout";
      var existingRegs = ViewBag.ExistingRegs as Dictionary<string, string>;
+    var paramedics = ViewBag.Paramedics as Dictionary<string, string>;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -295,10 +296,10 @@
             }
 
             .btn-detail {
-                width: 32px; height: 32px;
+                width: 120px; height: 32px;
                 border-radius: 8px;
                 border: 1.5px solid var(--gray-200);
-                background: var(--white);
+                background: var(--green-lt);
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
@@ -311,6 +312,20 @@
                 color: var(--white);
                 border-color: var(--navy);
             }
+
+            .btn-register {
+                background: var(--green-lt);
+                border-color: var(--green);
+                color: var(--green);
+            }
+            .btn-register:hover { background: var(--green); color: white; }
+            
+            .btn-registered {
+                background: #FEF9C3;
+                border-color: #EAB308;
+                color: #854D0E;
+            }
+            .btn-registered:hover { background: #EAB308; color: white; }
 
             /* ── PAGINATION ───────────────────────────────── */
             .pagination {
@@ -358,8 +373,6 @@
         <div class="welcome-text">Welcome back, <strong>@User.Identity?.Name</strong></div>
     </div>
     <div class="navbar-right">
-        <a href="#" class="nav-link">Patients</a>
-        
         <!-- Profile Dropdown -->
         <div style="position:relative;">
             <button class="btn-profile" onclick="toggleProfile()" type="button">
@@ -500,7 +513,6 @@ document.addEventListener('click', function(e) {
         <button type="submit" class="btn-save" style="padding:10px 20px">Search</button>
     </div>
 </form>
-
             <!-- TABLE -->
             <div class="table-wrap">
                 <table id="appointmentTable">
@@ -509,34 +521,35 @@ document.addEventListener('click', function(e) {
                             <th style="width:44px">No.</th>
                             <th>Appointment No.</th>
                             <th>Patient Name</th>
+                            <th>Doctor Name</th>
                             <th>Address</th>
-                            <th>Paket</th>
                             <th>Appointment Date</th>
-                            <th style="width:48px"></th>
+                            <th style="width:120px"></th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
                         @foreach (var (row, i) in Model.Select((r, i) => (r, i + 1)))
                             {   
-                                
+                                 var doctorName = paramedics != null && row.WorkStationCode != null && paramedics.ContainsKey(row.WorkStationCode)
+        ? paramedics[row.WorkStationCode]
+        : "-";
     var encryptedNo = EncryptHelper.Encrypt(row.AppointmentNo);
+     var hasWorkstation = !string.IsNullOrWhiteSpace(row.WorkStationCode);
     var detailUrl = Url.Action("DetailDashboard", "Home", new { appointmentNo = encryptedNo });
     var isRegistered = existingRegs != null && existingRegs.ContainsKey(row.AppointmentNo);
                                 <tr>
                                     <td class="td-no">@i</td>
                                     <td class="td-apt">@row.AppointmentNo</td>
                                     <td class="td-patient">@(row.PatientName ?? $"{row.FirstName} {row.LastName}")</td>
+                                        <td class="td-patient">@doctorName</td>
                                     <td style="max-width:200px; color:var(--gray-600)">@row.Address</td>
-                                    <td><span class="badge-paket">@row.VisitTypeCode</span></td>
                                     <td><span class="date-chip">@row.AppointmentDateTime.ToString("d-M-yyyy")</span></td>
                                     <td>
-                                       <button onclick="@(isRegistered 
-    ? $"window.location.href='{detailUrl}'" 
-    : $"openRegisModal('{encryptedNo}', '{Html.Raw(row.PatientName ?? $"{row.FirstName} {row.LastName}".Trim())}', '{detailUrl}')"
-)" class="btn-detail" title="@(isRegistered ? "Lihat Detail" : "Daftar")">
-    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-        <path d="m9 18 6-6-6-6"/>
-    </svg>
+                                    <button onclick="@(isRegistered 
+    ? $"openRegisDetail('{existingRegs[row.AppointmentNo]}')" 
+    : $"openRegisModal('{encryptedNo}', '{Html.Raw(row.PatientName ?? $"{row.FirstName} {row.LastName}".Trim())}', '{detailUrl}', '{hasWorkstation.ToString().ToLower()}')"
+)" class="btn-detail @(isRegistered ? "btn-registered" : "btn-register")">
+    <strong>@(isRegistered ? "Registered" : "Register")</strong>
 </button>
                                     </td>
                                 </tr>
@@ -603,10 +616,95 @@ document.addEventListener('click', function(e) {
         </div>
     </main>
 
+
+    <div id="regisDetailModal" style="display:none; position:fixed; inset:0; z-index:2000;
+     background:rgba(0,0,0,.5); backdrop-filter:blur(4px);
+     align-items:center; justify-content:center;">
+    
+        <div style="background:white; border-radius:16px; width:380px;
+             box-shadow:0 8px 40px rgba(0,0,0,.2); overflow:hidden;">
+            <div style="background:#EAB308; padding:20px; text-align:center;">
+                <div style="width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.2);
+                            display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">
+                    <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                </div>
+                <div style="color:white; font-size:15px; font-weight:700;">Data Registrasi</div>
+            </div>
+            <div style="padding:20px; display:flex; flex-direction:column; gap:12px;">
+                <div style="background:#F8FAFC; border-radius:10px; padding:12px 16px;">
+                    <div style="font-size:10.5px; color:#94A3B8; font-weight:600; margin-bottom:4px;">Nomor Registrasi</div>
+                    <div id="detailRegNo" style="font-size:15px; font-weight:800; color:#1B3A6B; letter-spacing:0.5px;"></div>
+                </div>
+                <div style="background:#F8FAFC; border-radius:10px; padding:12px 16px;">
+                    <div style="font-size:10.5px; color:#94A3B8; font-weight:600; margin-bottom:4px;">Tanggal Registrasi</div>
+                    <div id="detailRegDate" style="font-size:14px; font-weight:600; color:#1E293B;"></div>
+                </div>
+                <div style="background:#F8FAFC; border-radius:10px; padding:12px 16px;">
+                    <div style="font-size:10.5px; color:#94A3B8; font-weight:600; margin-bottom:4px;">Nama Pasien</div>
+                    <div id="detailRegPatient" style="font-size:14px; font-weight:600; color:#1E293B;"></div>
+                </div>
+            </div>
+            <div style="padding:0 20px 20px; display:flex; gap:10px;">
+                <button onclick="closeRegisDetail()" style="flex:1; padding:11px; border:1.5px solid #E2E8F0;
+                    border-radius:10px; background:white; font-size:13px; font-weight:600;
+                    color:#64748B; cursor:pointer; font-family:inherit;">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Overlay -->
 <div id="regisModal" style="display:none; position:fixed; inset:0; z-index:2000;
      background:rgba(0,0,0,.5); backdrop-filter:blur(4px);
      align-items:center; justify-content:center;">
+
+
+
+    <div id="stepPilihDokter" style="display:none; background:white; border-radius:16px; width:420px;
+     box-shadow:0 8px 40px rgba(0,0,0,.2); overflow:hidden;">
+    <div style="background:#0EA5E9; padding:20px; text-align:center;">
+        <div style="width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.15);
+                    display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">
+            <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </div>
+        <div style="color:white; font-size:15px; font-weight:700;">Pilih Dokter</div>
+        <div style="color:rgba(255,255,255,.7); font-size:12px; margin-top:4px;">
+            Pasien belum memiliki dokter yang ditugaskan
+        </div>
+    </div>
+    <div style="padding:20px;">
+        <div style="font-size:12px; font-weight:600; color:#475569; margin-bottom:8px;">
+            Pilih dokter untuk pasien <strong id="pilihDokterPatientName" style="color:#1B3A6B;"></strong>:
+        </div>
+        <input type="text" id="searchDokter" placeholder="Cari nama dokter..." 
+               oninput="filterDokter()"
+               style="width:100%; padding:10px 14px; border:1.5px solid #E2E8F0; border-radius:10px;
+                      font-size:13px; font-family:inherit; outline:none; margin-bottom:10px;
+                      background:#F8FAFC;" />
+        <div id="dokterList" style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+            <!-- diisi JS -->
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button onclick="closeRegisModal()" style="flex:1; padding:11px; border:1.5px solid #E2E8F0;
+                border-radius:10px; background:white; font-size:13px; font-weight:600;
+                color:#64748B; cursor:pointer; font-family:inherit;">Batal</button>
+            <button onclick="lanjutkanDenganDokter()" id="btnLanjutkanDokter"
+                    disabled
+                    style="flex:1; padding:11px; border:none; border-radius:10px;
+                           background:#1B3A6B; font-size:13px; font-weight:700;
+                           color:white; cursor:pointer; font-family:inherit; opacity:.5;">
+                Lanjutkan
+            </button>
+        </div>
+    </div>
+</div>
 
     <!-- Step 1: Warning Konfirmasi -->
     <div id="stepConfirm" style="background:white; border-radius:16px; width:380px;
@@ -666,10 +764,10 @@ document.addEventListener('click', function(e) {
             <div id="nomorRegistrasi" style="font-size:18px; font-weight:800; color:#1B3A6B;
                  background:#EFF6FF; border-radius:10px; padding:12px; margin:12px 0; letter-spacing:1px;">
             </div>
-            <button onclick="goToDetail()" style="width:100%; padding:12px; border:none;
-                border-radius:10px; background:#1B3A6B; font-size:13px; font-weight:700;
+            <button onclick="location.reload()" style="width:100%; padding:12px; border:none;
+                border-radius:10px; background:#16A34A; font-size:13px; font-weight:700;
                 color:white; cursor:pointer; font-family:inherit;">
-                Lihat Detail
+                Selesai
             </button>
         </div>
     </div>
@@ -697,38 +795,74 @@ document.addEventListener('click', function(e) {
 </div>
 </div>
 
-
-
-    <script>
-        let currentAppointmentNo = null;
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let currentAppointmentNo = null;
 let currentDetailUrl = null;
+let currentDetailUrlFromReg = null;
+let selectedDokter = null;
+let allDokters = [];
 
-function openRegisModal(appointmentNo, patientName, detailUrl) {
-    currentAppointmentNo = appointmentNo;
-    currentDetailUrl = detailUrl;
-    document.getElementById('confirmPatientName').textContent = patientName;
-    showStep('stepConfirm');
-    document.getElementById('regisModal').style.display = 'flex';
+// ============================================================
+// PROFILE DROPDOWN
+// ============================================================
+function toggleProfile() {
+    const dd = document.getElementById('profileDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
 }
 
-function closeRegisModal() {
-    document.getElementById('regisModal').style.display = 'none';
-    showStep('stepConfirm');
-}
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('profileDropdown');
+    if (!e.target.closest('[onclick="toggleProfile()"]') && dd.style.display === 'block') {
+        dd.style.display = 'none';
+    }
+});
 
+// ============================================================
+// MODAL REGISTRASI
+// ============================================================
 function showStep(stepId) {
-    ['stepConfirm', 'stepLoading', 'stepSuccess', 'stepError'].forEach(id => {
+    ['stepPilihDokter', 'stepConfirm', 'stepLoading', 'stepSuccess', 'stepError'].forEach(id => {
         document.getElementById(id).style.display = id === stepId ? 'block' : 'none';
     });
 }
 
+async function openRegisModal(appointmentNo, patientName, detailUrl, hasWorkstation) {
+    currentAppointmentNo = appointmentNo;
+    currentDetailUrl = detailUrl;
+    selectedDokter = null;
+    document.getElementById('regisModal').style.display = 'flex';
+
+    if (hasWorkstation === 'true') {
+        document.getElementById('confirmPatientName').textContent = patientName;
+        showStep('stepConfirm');
+    } else {
+        document.getElementById('pilihDokterPatientName').textContent = patientName;
+        document.getElementById('confirmPatientName').textContent = patientName;
+        await loadDokterList();
+        showStep('stepPilihDokter');
+    }
+}
+
+function closeRegisModal() {
+    document.getElementById('regisModal').style.display = 'none';
+    selectedDokter = null;
+    showStep('stepConfirm');
+}
+
 async function submitRegistrasi() {
-     showStep('stepLoading');
+    showStep('stepLoading');
     try {
         const response = await fetch('/Home/SaveRegistrasi', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ appointmentNo: currentAppointmentNo })
+            body: JSON.stringify({
+                appointmentNo: currentAppointmentNo,
+                selectedParamedicId: selectedDokter?.paramedicId ?? null,
+                selectedWorkStationCode: selectedDokter?.workStationCode ?? null
+            })
         });
 
         const result = await response.json();
@@ -751,30 +885,105 @@ function goToDetail() {
     window.location.href = currentDetailUrl;
 }
 
-function toggleProfile() {
-    const dd = document.getElementById('profileDropdown');
-    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+// ============================================================
+// PILIH DOKTER
+// ============================================================
+async function loadDokterList() {
+    const listEl = document.getElementById('dokterList');
+    listEl.innerHTML = '<div style="text-align:center; color:#94A3B8; padding:20px;">Memuat data dokter...</div>';
+
+    try {
+        const res = await fetch('/Home/GetDokterList');
+        allDokters = await res.json();
+        renderDokterList(allDokters);
+    } catch {
+        listEl.innerHTML = '<div style="text-align:center; color:#EF4444; padding:10px;">Gagal memuat data dokter.</div>';
+    }
 }
 
-document.addEventListener('click', function(e) {
-    const dd = document.getElementById('profileDropdown');
-    if (!e.target.closest('[onclick="toggleProfile()"]') && dd.style.display === 'block') {
-        dd.style.display = 'none';
+function renderDokterList(dokters) {
+    const listEl = document.getElementById('dokterList');
+
+    if (dokters.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; color:#94A3B8; padding:10px;">Tidak ada dokter ditemukan.</div>';
+        return;
     }
-});
 
-            function filterTable() {
-                const search  = document.getElementById('searchInput').value.toLowerCase();
-                const station = document.getElementById('filterSelect').value;
-                const rows    = document.querySelectorAll('#tableBody tr');
+    listEl.innerHTML = dokters.map(d => `
+        <div onclick="selectDokter(${d.paramedicId}, '${d.paramedicName}', '${d.workStationCode ?? ''}')"
+             id="dokter-${d.paramedicId}"
+             style="display:flex; align-items:center; gap:10px; padding:10px 12px;
+                    border:1.5px solid #E2E8F0; border-radius:10px; cursor:pointer; transition:all .15s;">
+            <div style="width:36px; height:36px; border-radius:50%; background:#EFF6FF;
+                        display:flex; align-items:center; justify-content:center;
+                        font-size:13px; font-weight:700; color:#2563EB; flex-shrink:0;">
+                ${d.paramedicName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+                <div style="font-size:13px; font-weight:600; color:#1E293B;">${d.paramedicName}</div>
+                <div style="font-size:11px; color:#94A3B8;">${d.workStationCode ?? '-'}</div>
+            </div>
+        </div>
+    `).join('');
+}
 
-                rows.forEach(row => {
-                    const matchSearch  = !search  || row.dataset.patient.includes(search) || row.dataset.aptno.includes(search);
-                    const matchStation = !station || row.dataset.station === station;
-                    row.style.display  = (matchSearch && matchStation) ? '' : 'none';
-                });
-            }
-    </script>
+function selectDokter(paramedicId, paramedicName, workStationCode) {
+    selectedDokter = { paramedicId, paramedicName, workStationCode };
 
+    document.querySelectorAll('#dokterList > div').forEach(el => {
+        el.style.borderColor = '#E2E8F0';
+        el.style.background = 'white';
+    });
+
+    const selected = document.getElementById(`dokter-${paramedicId}`);
+    if (selected) {
+        selected.style.borderColor = '#2563EB';
+        selected.style.background = '#EFF6FF';
+    }
+
+    const btn = document.getElementById('btnLanjutkanDokter');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+}
+
+function filterDokter() {
+    const q = document.getElementById('searchDokter').value.toLowerCase();
+    const filtered = allDokters.filter(d => d.paramedicName.toLowerCase().includes(q));
+    renderDokterList(filtered);
+}
+
+function lanjutkanDenganDokter() {
+    if (!selectedDokter) return;
+    showStep('stepConfirm');
+}
+
+// ============================================================
+// MODAL DETAIL REGISTRASI
+// ============================================================
+async function openRegisDetail(registrationNo) {
+    try {
+        const response = await fetch(`/Home/GetRegistrationDetail?registrationNo=${registrationNo}`);
+        const result = await response.json();
+
+        if (result.success) {
+            document.getElementById('detailRegNo').textContent = result.registrationNo;
+            document.getElementById('detailRegDate').textContent = result.registrationDate;
+            document.getElementById('detailRegPatient').textContent = result.patientName;
+            currentDetailUrlFromReg = result.detailUrl;
+            document.getElementById('regisDetailModal').style.display = 'flex';
+        }
+    } catch (err) {
+        alert('Gagal mengambil data registrasi.');
+    }
+}
+
+function closeRegisDetail() {
+    document.getElementById('regisDetailModal').style.display = 'none';
+}
+
+function goToDetailFromReg() {
+    window.location.href = currentDetailUrlFromReg;
+}
+</script>
 </body>
 </html>

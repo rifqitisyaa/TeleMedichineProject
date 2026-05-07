@@ -6,8 +6,14 @@ namespace   TeleMedichineProject.Common
 {
     public class EncDec
     {
-        private const string _saltString = "saltKereeennn";
-        private const string _passwordString = "whatisthis";
+        private static string _saltString = "saltKereeennn";
+        private static string _passwordString = "whatisthis";
+
+        public static void Initialize(string salt, string key)
+        {
+            if (!string.IsNullOrEmpty(salt)) _saltString = salt;
+            if (!string.IsNullOrEmpty(key)) _passwordString = key;
+        }
 
         public static string Encrypt(string input)
         {

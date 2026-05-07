@@ -2,12 +2,17 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TeleMedichineProject.Common;
+using TeleMedichineProject.Helpers;
 using TeleMedichineProject.Models;
 using TeleMedichineProject.Models.Common;
 using TeleMedichineProject.Models.TeleClass;
 using TeleMedichineProject.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Initialize Security Helpers
+EncryptHelper.Initialize(builder.Configuration["EncryptionSettings:EncryptHelperKey"]);
+EncDec.Initialize(builder.Configuration["EncryptionSettings:EncDecSalt"], builder.Configuration["EncryptionSettings:EncDecKey"]);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

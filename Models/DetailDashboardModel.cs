@@ -9,7 +9,7 @@
         public string? MiddleName { get; set; }
         public string? LastName { get; set; }
         public DateTime AppointmentDateTime { get; set; }
-        public DateTime RegistrationDateTime { get; set; }
+        public DateTime? RegistrationDateTime { get; set; }
         public string? MedicalNo { get; set; }
         public string? VisitTypeValue { get; set; }
         public string? WorkStationCode { get; set; }

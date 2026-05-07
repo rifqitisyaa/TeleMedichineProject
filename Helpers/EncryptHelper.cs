@@ -6,11 +6,16 @@ namespace TeleMedichineProject.Helpers
 {
     public static class EncryptHelper
     {
-        private static readonly string Key = "SphairaSecretKey123!";
+        private static string _key = "SphairaSecretKey123!";
+
+        public static void Initialize(string key)
+        {
+            if (!string.IsNullOrEmpty(key)) _key = key;
+        }
 
         public static string Encrypt(string text)
         {
-            var keyBytes = SHA256.HashData(Encoding.UTF8.GetBytes(Key));
+            var keyBytes = SHA256.HashData(Encoding.UTF8.GetBytes(_key));
             using var aes = Aes.Create();
             aes.Key = keyBytes;
             aes.GenerateIV();
@@ -31,7 +36,7 @@ namespace TeleMedichineProject.Helpers
                 var buffer = Convert.FromBase64String(text);
                 var iv = buffer.Take(16).ToArray();
                 var data = buffer.Skip(16).ToArray();
-                var keyBytes = SHA256.HashData(Encoding.UTF8.GetBytes(Key));
+                var keyBytes = SHA256.HashData(Encoding.UTF8.GetBytes(_key));
                 using var aes = Aes.Create();
                 aes.Key = keyBytes;
                 aes.IV = iv;

@@ -26,6 +26,7 @@ namespace TeleMedichineProject.Services
             context.Response.Cookies.Append("PhoneNo", user.PhoneNo ?? "");
             context.Response.Cookies.Append("RoleID", user.RoleID.ToString());
             context.Response.Cookies.Append("ServiceUnitID", user.ServiceUnitID.ToString());
+            context.Response.Cookies.Append("ParamedicType", user.ParamedicType.ToString());
 
             var claims = new List<Claim>
             {
@@ -35,6 +36,7 @@ namespace TeleMedichineProject.Services
                 new Claim("RoleID", user.RoleID.ToString()),
                 new Claim("ServiceUnitID", user.ServiceUnitID.ToString()),
                 new Claim("FullUserName", user.FullUserName ?? ""),
+                new Claim("ParamedicType", user.ParamedicType ?? ""),
 
                 new Claim("Email", user.Email.ToString()),
                 new Claim("Specialty", user.Specialty.ToString()),

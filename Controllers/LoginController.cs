@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using TeleMedichineProject.Common;
+using TeleMedichineProject.Helpers;
 using TeleMedichineProject.Models;
 using TeleMedichineProject.Models.TeleClass;
 using TeleMedichineProject.Models.Common;
@@ -41,6 +42,7 @@ namespace TeleMedichineProject.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> PostLogin(LoginViewModel model)
         {
             if (!ModelState.IsValid)
@@ -55,6 +57,8 @@ namespace TeleMedichineProject.Controllers
                 ViewBag.Error = "User tidak ditemukan";
                 return View("~/Views/Account/Login.cshtml", model);
             }
+
+
 
             var userId = user.UserId;
 
@@ -81,6 +85,11 @@ namespace TeleMedichineProject.Controllers
             var siteCode = roles.First().SiteCode;
 
             var role = await _commonDbContext.sysRoles.FindAsync(roleId);
+            if (role == null)
+            {
+                ViewBag.Error = "Role detail tidak ditemukan";
+                return View("~/Views/Account/Login.cshtml", model);
+            }
 
             var serviceUnits = await _commonDbContext.sysServiceUnitInUser
                 .Where(s => s.UserId == userId)
@@ -89,10 +98,9 @@ namespace TeleMedichineProject.Controllers
             // SET AppUserLogin
             _appUserLogin.UserID = userId;
             _appUserLogin.UserName = model.Username;
-            _appUserLogin.Password = model.Password;
             _appUserLogin.SiteCode = siteCode;
             _appUserLogin.RoleID = roleId;
-            _appUserLogin.ModuleID = role?.ModuleID;
+            _appUserLogin.ModuleID = role.ModuleID;
 
             // 4. Ambil SysUser (sama seperti SSO)
             var sysUser = await _appDbContext.sysUser
@@ -101,7 +109,7 @@ namespace TeleMedichineProject.Controllers
 
             if (sysUser == null)
             {
-                ViewBag.Error = "User tidak ditemukan di system";
+                ViewBag.Error = "User profile tidak ditemukan di database operasional";
                 return View("~/Views/Account/Login.cshtml", model);
             }
 
@@ -119,7 +127,7 @@ namespace TeleMedichineProject.Controllers
             }
 
             // APPLY ke AppUserLogin
-            if (sysUser.IsParamedic == true && sysUser.ParamedicID != null)
+            if (sysUser.ParamedicID != null)
             {
                 _appUserLogin.ParamedicId = sysUser.ParamedicID.Value;
 
@@ -131,6 +139,9 @@ namespace TeleMedichineProject.Controllers
                 {
                     _appUserLogin.FullUserName = paramedic.ParamedicName.Trim();
                     _appUserLogin.ParamedicType = paramedicTypeName;
+                    _appUserLogin.ParamedicTypeCode = paramedic.GCParamedicType?.Trim();
+                    _appUserLogin.ParamedicCode = paramedic.ParamedicCode;
+
 
                     var address = await _appDbContext.Address
                         .AsNoTracking()
@@ -214,7 +225,29 @@ namespace TeleMedichineProject.Controllers
                 logID.ToString()
             );
 
-            ViewBag.Message = "Login successful!"; // tetap dipertahankan
+            ViewBag.Message = "Login successful!";
+
+            // REDIRECTION LOGIC
+            var typeCode = (_appUserLogin.ParamedicTypeCode ?? "").Trim();
+            if (typeCode == "X0055^001")
+            {
+                // Kalau Dokter, cari appointment terakhir dia berdasarkan ParamedicCode
+                var paraCode = _appUserLogin.ParamedicCode;
+                
+                var latestApt = await _appDbContext.Appointment
+                    .Where(a => a.WorkStationCode == paraCode && !a.IsDeleted) 
+                    .OrderByDescending(a => a.AppointmentDateTime)
+                    .FirstOrDefaultAsync();
+
+                if (latestApt != null)
+                {
+                    return RedirectToAction("DetailDashboard", "Home", new { appointmentNo = EncryptHelper.Encrypt(latestApt.AppointmentNo) });
+                }
+                else
+                {
+                        return RedirectToAction("EmptyState", "Home"); // dokter tapi kosong
+                }
+            }
 
             return RedirectToAction("Index", "Home");
         }
