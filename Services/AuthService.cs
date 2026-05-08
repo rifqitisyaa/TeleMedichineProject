@@ -53,7 +53,12 @@ namespace TeleMedichineProject.Services
 
             await context.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
-                principal
+                principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = false,
+                    ExpiresUtc = null
+                }
             );
         }
     }
