@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace TeleMedichineProject.Models.TeleClass;
 
 [Keyless]
-public partial class SphairaTable
+public partial class sidilanTable
 {
     [StringLength(255)]
     public string? Name { get; set; }

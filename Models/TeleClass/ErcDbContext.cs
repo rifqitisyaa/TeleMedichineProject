@@ -2627,7 +2627,7 @@ public partial class ErcDbContext : DbContext
 
     public virtual DbSet<SpectaclePrescription> SpectaclePrescription { get; set; }
 
-    public virtual DbSet<SphairaTable> SphairaTable { get; set; }
+    public virtual DbSet<sidilanTable> sidilanTable { get; set; }
 
     public virtual DbSet<SplitBillInpatient> SplitBillInpatient { get; set; }
 

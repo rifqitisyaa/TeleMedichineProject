@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="img\**" />
+    <Content Remove="img\**" />
+    <EmbeddedResource Remove="img\**" />
+    <None Remove="img\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="Controllers\AccountController.cs" />
     <Compile Remove="Services\ITariffService.cs" />
     <Compile Remove="Services\TariffService.cs" />
