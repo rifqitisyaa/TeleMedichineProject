@@ -133,42 +133,41 @@
         .error-box span { color: #E11D48; font-size: 13px; font-weight: 600; }
 
 
-        /* RESPONSIVE FIX UNTUK HP */
 @@media (max-width: 768px) {
     body {
-        overflow-y: auto; /* Biar bisa scroll kalau layar HP-nya pendek */
+        overflow-y: auto;
     }
 
     .left {
-        display: none; /* Ngilangin konten kiri di HP */
+        display: none;
     }
 
     .right {
         width: 100%;
         flex: none;
-        padding: 40px 24px; /* Padding lebih kecil biar lega di layar sempit */
-        justify-content: flex-start; /* Biar form-nya agak naik ke atas, gak terlalu tengah banget */
+        padding: 40px 24px;
+        justify-content: flex-start;
         min-height: 100vh;
     }
 
     .logo-container {
-        position: relative; /* Gak melayang lagi, biar ikut flow konten */
+        position: relative;
         top: 0;
         left: 0;
         margin-bottom: 40px;
-        text-align: center; /* Logo di tengah kalau di HP */
+        text-align: center;
     }
 
     .form-container {
-        max-width: 100%; /* Form full lebar layar HP minus padding */
+        max-width: 100%;
     }
 
     .form-title {
-        font-size: 26px; /* Dikecilin dikit biar gak menuhin layar */
+        font-size: 26px;
     }
 
     .left-footer {
-        position: static; /* Gak melayang di bawah lagi */
+        position: static;
         margin-top: 40px;
         text-align: center;
         padding-bottom: 20px;
