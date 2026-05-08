@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -27,7 +28,6 @@ namespace TeleMedichineProject.Controllers
         }
         public async Task<IActionResult> Index(string? search, string? date, int page = 1)
         {
-
             int pageSize = 10;
 
             var query = _db.Appointment.AsQueryable();

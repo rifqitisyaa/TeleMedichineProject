@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sidilan — Staff Login</title>
+    <title>Sphaira — Staff Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,22 +39,22 @@
     z-index: 1;
 }
 
-        .logo { font-size: 24px; font-weight: 800; color: white; letter-spacing: -0.5px; }
+        .logo { font-size: 29px; font-weight: 800; color: white; letter-spacing: -0.5px; }
         .logo span { color: #0EA5E9; }
         .left-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
         .restricted-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.35); border-radius: 8px; padding: 8px 14px; width: fit-content; }
-        .restricted-text { font-size: 12px; color: #FCA5A5; font-weight: 600; }
-        .left-tagline { font-size: 26px; font-weight: 800; color: white; line-height: 1.35; }
-        .left-sub { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; }
+        .restricted-text { font-size: 17px; color: #FCA5A5; font-weight: 600; }
+        .left-tagline { font-size: 31px; font-weight: 800; color: white; line-height: 1.35; }
+        .left-sub { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.6; }
         .divider-left { height: 1px; background: rgba(255,255,255,0.1); }
         .pill-group { display: flex; flex-direction: column; gap: 10px; }
         .pill { display: flex; align-items: center; gap: 10px; }
         .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #0EA5E9; flex-shrink: 0; }
-        .pill-text { font-size: 12.5px; color: rgba(255,255,255,0.7); }
-        .left-footer { font-size: 11px; color: rgba(255,255,255,0.3); }
+        .pill-text { font-size: 15.5px; color: rgba(255,255,255,0.7); }
+        .left-footer { font-size: 15px; color: rgba(255,255,255,0.3); }
 
         /* RIGHT */
-        .right { flex: 1; background: white; display: flex; flex-direction: column; justify-content: center; padding: 48px 44px; }
+        .right { flex: 1; background: white; display: flex; flex-direction: column; justify-content: center; padding: 70px 70px; }
         .portal-tag { display: inline-flex; align-items: center; gap: 6px; background: #EFF6FF; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 18px; width: fit-content; letter-spacing: 0.3px; }
         .portal-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563EB; }
         .form-title { font-size: 22px; font-weight: 800; color: #1B3A6B; margin-bottom: 4px; }
@@ -94,8 +94,12 @@
 
 <!-- LEFT -->
 <div class="left">
-    <div class="logo"><span>S</span>idilan</div>
+    <div class="logo"><span>S</span>phaira</div>
     <div class="left-body">
+        <div class="restricted-badge">
+            <svg width="13" height="13" fill="none" stroke="#FCA5A5" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span class="restricted-text">Internal access only</span>
+        </div>
         <div class="left-tagline">Doctor &amp; Staff<br/>Portal</div>
         <div class="left-sub">Sistem ini hanya dapat diakses oleh tenaga medis dan staf yang telah terdaftar.</div>
         <div class="divider-left"></div>
@@ -106,7 +110,7 @@
             <div class="pill"><div class="pill-dot"></div><span class="pill-text">Manajemen resep &amp; tanda vital</span></div>
         </div>
     </div>
-    <div class="left-footer">© 2026 sidilan · Confidential &amp; Restricted</div>
+    <div class="left-footer">© 2026 Sphaira · Confidential &amp; Restricted</div>
 </div>
 
 <!-- RIGHT -->
@@ -159,6 +163,7 @@
 
         <button type="submit" class="btn-login">Sign in</button>
     </form>
+
 </div>
 
 <script>

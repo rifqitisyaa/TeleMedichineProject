@@ -6,7 +6,7 @@ namespace TeleMedichineProject.Helpers
 {
     public static class EncryptHelper
     {
-        private static string _key = "sidilanSecretKey123!";
+        private static string _key = "SphairaSecretKey123!";
 
         public static void Initialize(string key)
         {

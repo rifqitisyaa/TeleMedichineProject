@@ -17,5 +17,5 @@ public partial class Sm_ItemVitalSign
 
     [StringLength(50)]
     [Unicode(false)]
-    public string? sidilanCodeItem { get; set; }
+    public string? SphairaCodeItem { get; set; }
 }
