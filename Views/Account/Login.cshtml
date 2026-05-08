@@ -11,166 +11,237 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #E8F0FB; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; display: flex; height: 100vh; overflow: hidden; background: #ffffff; }
 
-        /* LEFT */
-        .left { width: 60%;  position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 40px 36px;
-    overflow: hidden;
-
-    /* Background image */
-    background-image: url('/images/LoginBackground.jpg');
-    background-size: cover;
-    background-position: center;}
-    .left::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(27, 58, 107, 0.82); /* warna navy + opacity */
-    z-index: 0;
-}
-
-/* Pastikan konten di atas overlay */
-.left > * {
-    position: relative;
-    z-index: 1;
-}
-
-        .logo { font-size: 29px; font-weight: 800; color: white; letter-spacing: -0.5px; }
-        .logo span { color: #0EA5E9; }
-        .left-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
-        .restricted-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.35); border-radius: 8px; padding: 8px 14px; width: fit-content; }
-        .restricted-text { font-size: 17px; color: #FCA5A5; font-weight: 600; }
-        .left-tagline { font-size: 31px; font-weight: 800; color: white; line-height: 1.35; }
-        .left-sub { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.6; }
-        .divider-left { height: 1px; background: rgba(255,255,255,0.1); }
-        .pill-group { display: flex; flex-direction: column; gap: 10px; }
-        .pill { display: flex; align-items: center; gap: 10px; }
-        .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #0EA5E9; flex-shrink: 0; }
-        .pill-text { font-size: 15.5px; color: rgba(255,255,255,0.7); }
-        .left-footer { font-size: 15px; color: rgba(255,255,255,0.3); }
-
-        /* RIGHT */
-        .right { flex: 1; background: white; display: flex; flex-direction: column; justify-content: center; padding: 70px 70px; }
-        .portal-tag { display: inline-flex; align-items: center; gap: 6px; background: #EFF6FF; color: #1D4ED8; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 18px; width: fit-content; letter-spacing: 0.3px; }
-        .portal-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563EB; }
-        .form-title { font-size: 22px; font-weight: 800; color: #1B3A6B; margin-bottom: 4px; }
-        .form-sub { font-size: 13px; color: #94A3B8; margin-bottom: 28px; line-height: 1.5; }
-
-        /* FORM */
-        .field { margin-bottom: 16px; }
-        .field label { display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 6px; letter-spacing: 0.3px; }
-        .input-wrap { position: relative; }
-        .input-wrap .icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
-        .field input[type=text], .field input[type=password] {
-            width: 100%; padding: 11px 12px 11px 40px;
-            border: 1.5px solid #E2E8F0; border-radius: 10px;
-            font-size: 13.5px; font-family: inherit;
-            background: #F8FAFC; color: #1E293B; outline: none;
-            transition: border-color .15s, background .15s;
+        /* LEFT: Sekarang bener-bener cuma background fokus */
+        .left { 
+            width: 65%; 
+            position: relative;
+            background-image: url('/images/LoginBackground.png');
+            background-size: cover;
+            background-position: center;
         }
-        .field input:focus { border-color: #2563EB; background: white; }
-        .eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; }
-        .field-error { font-size: 11.5px; color: #EF4444; margin-top: 5px; display: block; }
+        .left::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(27, 58, 107, 0.5) 0%, rgba(14, 165, 218, 0.2) 100%);
+            z-index: 1;
+        }
 
-        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .remember { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #64748B; cursor: pointer; }
-        .forgot { font-size: 12.5px; color: #2563EB; font-weight: 600; text-decoration: none; }
+        /* RIGHT: Semua konten pindah sini */
+        .right { 
+            flex: 1; 
+            background: white; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            padding: 0 8%; /* Pake persentase biar responsif */
+            position: relative;
+        }
 
-        .btn-login { width: 100%; padding: 13px; background: #1B3A6B; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background .15s; }
-        .btn-login:hover { background: #2563EB; }
+        /* Logo pindah ke kanan atas biar tetap branding */
+        .logo-container {
+            position: absolute;
+            top: 40px;
+            left: 8%;
+        }
+        .logo { font-size: 24px; font-weight: 800; color: #1B3A6B; letter-spacing: -0.5px; }
+        .logo span { color: #0ea5da; }
 
-        .error-box { display: flex; align-items: center; gap: 10px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 11px 14px; margin-bottom: 18px; }
-        .error-box span { font-size: 13px; color: #B91C1C; font-weight: 500; }
+        .form-container { width: 100%; max-width: 400px; margin: 0 auto; }
 
-        .warning-box { display: flex; align-items: flex-start; gap: 9px; background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 10px; padding: 10px 13px; margin-top: 16px; }
-        .warning-text { font-size: 11.5px; color: #92400E; line-height: 1.5; }
+        .portal-tag { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            background: #F0F9FF; 
+            color: #0369A1; 
+            font-size: 11px; 
+            font-weight: 700; 
+            padding: 6px 14px; 
+            border-radius: 50px; 
+            margin-bottom: 24px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .portal-dot { width: 6px; height: 6px; border-radius: 50%; background: #0EA5E9; animation: pulse 2s infinite; }
+
+        .form-title { font-size: 32px; font-weight: 800; color: #1B3A6B; margin-bottom: 12px; letter-spacing: -0.02em; }
+        .form-sub { font-size: 14px; color: #64748B; margin-bottom: 36px; line-height: 1.6; }
+
+        /* FORM STYLING */
+        .field { margin-bottom: 20px; }
+        .field label { display: block; font-size: 12px; font-weight: 700; color: #1E293B; margin-bottom: 8px; letter-spacing: 0.05em; }
+        .input-wrap { position: relative; }
+        .input-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; opacity: 0.7; }
+        
+        .field input {
+            width: 100%; 
+            padding: 14px 14px 14px 44px;
+            border: 2px solid #F1F5F9; 
+            border-radius: 12px;
+            font-size: 14px; 
+            font-family: inherit;
+            background: #F8FAFC; 
+            color: #1E293B; 
+            outline: none;
+            transition: all .2s ease;
+        }
+        .field input:focus { border-color: #0EA5E9; background: white; box-shadow: 0 0 0 4px rgba(14, 165, 218, 0.1); }
+        
+        .eye-btn { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94A3B8; }
+
+        .row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 30px; }
+        .remember { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; cursor: pointer; }
+        .remember input { width: 16px; height: 16px; accent-color: #1B3A6B; }
+
+        .btn-login { 
+            width: 100%; 
+            padding: 16px; 
+            background: #1B3A6B; 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 15px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            transition: all .3s; 
+            box-shadow: 0 4px 12px rgba(27, 58, 107, 0.2);
+        }
+        .btn-login:hover { background: #0EA5E9; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(14, 165, 218, 0.3); }
+
+        .left-footer { 
+            position: absolute; 
+            bottom: 40px; 
+            left: 8%; 
+            font-size: 12px; 
+            color: #CBD5E1; 
+        }
+
+        @@keyframes pulse {
+            0% { transform: scale(0.95); opacity: 1; }
+            70% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(0.95); opacity: 1; }
+        }
+
+        /* Error box styling benerin dikit */
+        .error-box { 
+            background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; 
+            padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
+        }
+        .error-box span { color: #E11D48; font-size: 13px; font-weight: 600; }
+
+
+        /* RESPONSIVE FIX UNTUK HP */
+@@media (max-width: 768px) {
+    body {
+        overflow-y: auto; /* Biar bisa scroll kalau layar HP-nya pendek */
+    }
+
+    .left {
+        display: none; /* Ngilangin konten kiri di HP */
+    }
+
+    .right {
+        width: 100%;
+        flex: none;
+        padding: 40px 24px; /* Padding lebih kecil biar lega di layar sempit */
+        justify-content: flex-start; /* Biar form-nya agak naik ke atas, gak terlalu tengah banget */
+        min-height: 100vh;
+    }
+
+    .logo-container {
+        position: relative; /* Gak melayang lagi, biar ikut flow konten */
+        top: 0;
+        left: 0;
+        margin-bottom: 40px;
+        text-align: center; /* Logo di tengah kalau di HP */
+    }
+
+    .form-container {
+        max-width: 100%; /* Form full lebar layar HP minus padding */
+    }
+
+    .form-title {
+        font-size: 26px; /* Dikecilin dikit biar gak menuhin layar */
+    }
+
+    .left-footer {
+        position: static; /* Gak melayang di bawah lagi */
+        margin-top: 40px;
+        text-align: center;
+        padding-bottom: 20px;
+    }
+}
     </style>
 </head>
 <body>
 
-<!-- LEFT -->
-<div class="left">
-    <div class="logo"><span>S</span>phaira</div>
-    <div class="left-body">
-        <div class="restricted-badge">
-            <svg width="13" height="13" fill="none" stroke="#FCA5A5" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span class="restricted-text">Internal access only</span>
+    <div class="left"></div>
+
+    <div class="right">
+        <div class="logo-container">
+            <div class="logo"><span>S</span>phaira</div>
         </div>
-        <div class="left-tagline">Doctor &amp; Staff<br/>Portal</div>
-        <div class="left-sub">Sistem ini hanya dapat diakses oleh tenaga medis dan staf yang telah terdaftar.</div>
-        <div class="divider-left"></div>
-        <div class="pill-group">
-            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Dashboard appointment pasien</span></div>
-            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Rekam medis &amp; SOAP notes</span></div>
-            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Konsultasi via WhatsApp</span></div>
-            <div class="pill"><div class="pill-dot"></div><span class="pill-text">Manajemen resep &amp; tanda vital</span></div>
+
+        <div class="form-container">
+
+            <div class="form-title">Sign In</div>
+            <div class="form-sub"></div>
+
+            @if (!string.IsNullOrEmpty(ViewBag.Error as string))
+            {
+                <div class="error-box">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>@ViewBag.Error</span>
+                </div>
+            }
+
+            <form asp-controller="Login" asp-action="PostLogin" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="field">
+                    <label>USERNAME</label>
+                    <div class="input-wrap">
+                        <span class="icon">
+                            <svg width="18" height="18" fill="none" stroke="#64748B" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
+                        <input type="text" asp-for="Username" placeholder="Contoh: dr.budi" autocomplete="username" required />
+                    </div>
+                    <span asp-validation-for="Username" class="field-error"></span>
+                </div>
+
+                <div class="field">
+                    <label>PASSWORD</label>
+                    <div class="input-wrap">
+                        <span class="icon">
+                            <svg width="18" height="18" fill="none" stroke="#64748B" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </span>
+                        <input type="password" asp-for="Password" id="passwordInput" placeholder="••••••••" autocomplete="current-password" required />
+                        <button type="button" class="eye-btn" onclick="togglePassword()">
+                            <svg id="eyeIcon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="field-error"></span>
+                </div>
+
+                <div class="row">
+                    <label class="remember">
+                        <input type="checkbox" /> Ingat saya di perangkat ini
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-login">Masuk ke Dashboard</button>
+            </form>
         </div>
     </div>
-    <div class="left-footer">© 2026 Sphaira · Confidential &amp; Restricted</div>
-</div>
 
-<!-- RIGHT -->
-<div class="right">
-    <div class="portal-tag"><div class="portal-dot"></div> STAFF PORTAL</div>
-    <div class="form-title">Sign in</div>
-    <div class="form-sub">Masukkan kredensial yang diberikan oleh administrator sistem.</div>
-
-    @if (!string.IsNullOrEmpty(ViewBag.Error as string))
-    {
-        <div class="error-box">
-            <svg width="16" height="16" fill="none" stroke="#EF4444" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span>@ViewBag.Error</span>
-        </div>
-    }
-
-    <form asp-controller="Login" asp-action="PostLogin" method="post">
-        @Html.AntiForgeryToken()
-
-        <div class="field">
-            <label>USERNAME</label>
-            <div class="input-wrap">
-                <span class="icon">
-                    <svg width="15" height="15" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                </span>
-                <input type="text" asp-for="Username" placeholder="Masukkan username" autocomplete="username" />
-            </div>
-            <span asp-validation-for="Username" class="field-error"></span>
-        </div>
-
-        <div class="field">
-            <label>PASSWORD</label>
-            <div class="input-wrap">
-                <span class="icon">
-                    <svg width="15" height="15" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </span>
-                <input type="password" asp-for="Password" id="passwordInput" placeholder="Masukkan password" autocomplete="current-password" style="padding-right: 42px;" />
-                <button type="button" class="eye-btn" onclick="togglePassword()">
-                    <svg id="eyeIcon" width="15" height="15" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-            </div>
-            <span asp-validation-for="Password" class="field-error"></span>
-        </div>
-
-        <div class="row">
-            <label class="remember">
-                <input type="checkbox" /> Remember me
-            </label>
-        </div>
-
-        <button type="submit" class="btn-login">Sign in</button>
-    </form>
-
-</div>
-
-<script>
-    function togglePassword() {
-        const input = document.getElementById('passwordInput');
-        input.type = input.type === 'password' ? 'text' : 'password';
-    }
-</script>
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('passwordInput');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+    </script>
 </body>
 </html>
