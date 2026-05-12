@@ -88,6 +88,9 @@ public partial class JobOrderDt
     [Column(TypeName = "numeric(18, 4)")]
     public decimal? TotalPersonal { get; set; }
 
+    [NotMapped]
+    public decimal? Qty { get; set; }
+
     public bool? IsCito { get; set; }
 
     public bool? IsRead { get; set; }

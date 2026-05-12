@@ -8,6 +8,7 @@ using System.Globalization;
 using TeleMedichineProject.Common;
 using TeleMedichineProject.Helpers;
 using TeleMedichineProject.Models;
+using TeleMedichineProject.Models.DTO;
 using TeleMedichineProject.Models.TeleClass;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -86,6 +87,75 @@ namespace TeleMedichineProject.Controllers
                 .ToDictionary(g => g.Key, g => g.First().RegistrationNo);
 
             return View(data);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllAppointmentNos(string? date, string? search = "")
+        {
+            try
+            {
+                var query = _db.Appointment.Where(a => !a.IsDeleted);
+
+                if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+                    query = query.Where(a => a.AppointmentDateTime.Date == parsedDate.Date);
+
+                if (!string.IsNullOrEmpty(search))
+                    query = query.Where(a =>
+                        a.PatientName.Contains(search) ||
+                        a.AppointmentNo.Contains(search));
+
+                var nos = await query.Select(a => a.AppointmentNo).ToListAsync();
+                return Json(new { success = true, data = nos });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, data = Array.Empty<string>() });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetLatestAppointments(string date, string search = "")
+        {
+            try
+            {
+                var query = _db.Appointment.AsQueryable();
+
+                if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+                    query = query.Where(a => a.AppointmentDateTime.Date == parsedDate.Date);
+                else
+                    query = query.Where(a => a.AppointmentDateTime.Date == DateTime.Today);
+
+                if (!string.IsNullOrEmpty(search))
+                    query = query.Where(a =>
+                        a.PatientName.Contains(search) ||
+                        a.AppointmentNo.Contains(search));
+
+                var appointments = await query
+                     .OrderByDescending(a => a.AppointmentDateTime)
+                     .Select(a => new {
+                         appointmentNo = a.AppointmentNo,
+                         patientName = a.PatientName ?? (a.FirstName + " " + a.LastName).Trim(),
+                         appointmentDate = a.AppointmentDateTime.ToString("d-M-yyyy"),
+                         hasWorkstation = a.WorkStationCode != null && a.WorkStationCode != ""
+                     })
+                     .ToListAsync();
+
+                var result = appointments.Select(a => new {
+                    a.appointmentNo,
+                    a.patientName,
+                    a.appointmentDate,
+                    a.hasWorkstation,
+                    encryptedAptNo = EncryptHelper.Encrypt(a.appointmentNo)
+                });
+
+                return Json(new { success = true, data = result });
+            }
+            catch (Exception ex)
+            {
+                // Jangan crash — return empty supaya polling tetap jalan
+                Console.WriteLine($"[GetLatestAppointments] Error: {ex.Message}");
+                return Json(new { success = false, data = Array.Empty<object>() });
+            }
         }
 
         public IActionResult EmptyState()
@@ -381,10 +451,6 @@ namespace TeleMedichineProject.Controllers
         public string Objective { get; set; }
         public string Assessment { get; set; }
         public string Plan { get; set; }
-    }
-    public class TransactionNumberResult
-    {
-        public string TransactionNumber { get; set; } // sesuaikan nama kolom return SP
     }
 
 }

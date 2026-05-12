@@ -44,6 +44,7 @@ builder.Services.AddSession(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AppUserLogin>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITariffService, TariffService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

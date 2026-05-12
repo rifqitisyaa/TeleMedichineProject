@@ -1,18 +1,14 @@
-﻿using MasterPageTest.DTO;
-using MasterPageTest.Models;
-using MasterPageTest.Models.NonCommon;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.Reflection.Metadata.Ecma335;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+﻿using Microsoft.EntityFrameworkCore;
+using TeleMedichineProject.Models.DTO;
+using TeleMedichineProject.Models.TeleClass;
 
-namespace MasterPageTest.Services
+namespace TeleMedichineProject.Services
 {
     public class TariffService: ITariffService
     {
-        private readonly EmrDbContext _context;
+        private readonly ErcDbContext _context;
 
-        public TariffService(EmrDbContext context)
+        public TariffService(ErcDbContext context)
         {
             _context = context;
         }
@@ -23,32 +19,32 @@ namespace MasterPageTest.Services
 
             var tariff = new TariffDto();
 
-            var regEntity = await _context.Registrations
+            var regEntity = await _context.Registration
                 .FirstOrDefaultAsync(x => x.RegistrationNo == req.RegistrationNo);
 
             if (!req.IsRecalculation || (req.IsRecalculation && string.IsNullOrEmpty(req.CoveredClassCode)))
             {
                 req.ChargeClassCode = regEntity.ChargeClassCode;
-                req.BusinessPartnerId = regEntity.BusinessPartnerId;
+                req.BusinessPartnerID = regEntity.BusinessPartnerID;
                 req.DocumentNo = regEntity.CustomerDocumentNo;
                 req.CoveredClassCode = regEntity.CoveredClassCode ?? req.ChargeClassCode;
             }
 
-            var classEntity = await _context.Classes
+            var classEntity = await _context.Class
                 .FirstOrDefaultAsync(x => x.ClassCode == req.ChargeClassCode);
 
-            var costEntity = await _context.ItemCosts
-                .FirstOrDefaultAsync(x => x.SiteCode == regEntity.SiteCode && x.ItemId == req.ItemId);
+            var costEntity = await _context.ItemCost
+                .FirstOrDefaultAsync(x => x.SiteCode == regEntity.SiteCode && x.ItemID == req.ItemID);
 
             if (costEntity != null)
             {
-                tariff.CostPrice = (costEntity.Material ?? 0)
-                         + (costEntity.Labor ?? 0)
-                         + (costEntity.Overhead ?? 0)
-                         + (costEntity.SubContract ?? 0)
-                         + (costEntity.Burden ?? 0);
+                tariff.CostPrice = (costEntity.Material ?? 0m)
+                         + (costEntity.Labor ?? 0m)
+                         + (costEntity.Overhead ?? 0m)
+                         + (costEntity.SubContract ?? 0m)
+                         + (costEntity.Burden ?? 0m);
 
-                tariff.LaborCost = (costEntity.Labor ?? 0);
+                tariff.LaborCost = (costEntity.Labor ?? 0m);
             }
 
             var parUseRegDate = await GetSysParameterAsync("IsUseRegDateInTarif");
@@ -62,23 +58,23 @@ namespace MasterPageTest.Services
 
             var personalBP = await GetSysParameterAsync("PersonalBusinessPartnerID");
 
-            if (req.BusinessPartnerId == Convert.ToInt32(personalBP.ParameterValue))
+            if (req.BusinessPartnerID == Convert.ToInt32(personalBP?.ParameterValue))
             {
-                return await GetStandardTariffAsync(regEntity.SiteCode, req.ItemId, req.TransactionDate, classEntity.ClassCategoryCode);
+                return await GetStandardTariffAsync(regEntity.SiteCode, req.ItemID, req.TransactionDate, classEntity.ClassCategoryCode);
             }
 
-            var contractEntity = await _context.CustomerContracts
+            var contractEntity = await _context.CustomerContract
                 .FirstOrDefaultAsync(x => x.DocumentNo == req.DocumentNo);
 
             if (contractEntity == null)
             {
-                return await GetStandardTariffAsync(regEntity.SiteCode, req.ItemId, req.TransactionDate, classEntity.ClassCategoryCode);
+                return await GetStandardTariffAsync(regEntity.SiteCode, req.ItemID, req.TransactionDate, classEntity.ClassCategoryCode);
             }
 
             if (contractEntity.StartingDate <= DateOnly.FromDateTime(req.TransactionDate) &&
                 contractEntity.EndingDate >= DateOnly.FromDateTime(req.TransactionDate))
             {
-                if (contractEntity.GccoverageType == "X0104^03")
+                if (contractEntity.GCCoverageType == "X0104^03")
                 {
                     return await HandlePlafonAsync(req, regEntity, classEntity, contractEntity);
                 }
@@ -90,7 +86,7 @@ namespace MasterPageTest.Services
 
             return await GetStandardTariffAsync(
                 regEntity.SiteCode,
-                req.ItemId,
+                req.ItemID,
                 req.TransactionDate,
                 classEntity.ClassCategoryCode);
         }
@@ -112,24 +108,24 @@ namespace MasterPageTest.Services
                 MaxVariablePrice = 0,
             };
 
-            var classEntity = await _context.Classes
+            var classEntity = await _context.Class
                 .FirstOrDefaultAsync(x => x.ClassCategoryCode == req.ChargeClassCode);
 
-            var costEntity = await _context.ItemCosts
-                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemId == req.ItemId);
+            var costEntity = await _context.ItemCost
+                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemID == req.ItemID);
 
             if (costEntity != null)
             {
-                tariff.CostPrice = (costEntity.Material ?? 0)
-                    + (costEntity.Labor ?? 0)
-                    + (costEntity.Overhead ?? 0)
-                    + (costEntity.SubContract ?? 0)
-                    + (costEntity.Burden ?? 0);
+                tariff.CostPrice = (costEntity.Material ?? 0m)
+                    + (costEntity.Labor ?? 0m)
+                    + (costEntity.Overhead ?? 0m)
+                    + (costEntity.SubContract ?? 0m)
+                    + (costEntity.Burden ?? 0m);
 
-                tariff.LaborCost = (costEntity.Labor ?? 0);
+                tariff.LaborCost = (costEntity.Labor ?? 0m);
             }
 
-            var standardTariff = await GetStandardTariffAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity.ClassCategoryCode);
+            var standardTariff = await GetStandardTariffAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity.ClassCategoryCode);
 
             return new TariffDto
             {
@@ -151,24 +147,24 @@ namespace MasterPageTest.Services
 
             var tariff = new TariffDto();
 
-            var classEntity = await _context.Classes
+            var classEntity = await _context.Class
                 .FirstOrDefaultAsync(x => x.ClassCode == req.ChargeClassCode);
 
-            var costEntity = await _context.ItemCosts
-                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemId == req.ItemId);
+            var costEntity = await _context.ItemCost
+                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemID == req.ItemID);
 
             if (costEntity != null)
             {
-                tariff.CostPrice = (costEntity.Material ?? 0)
-                    + (costEntity.Labor ?? 0)
-                    + (costEntity.Overhead ?? 0)
-                    + (costEntity.SubContract ?? 0)
-                    + (costEntity.Burden ?? 0);
+                tariff.CostPrice = (costEntity.Material ?? 0m)
+                    + (costEntity.Labor ?? 0m)
+                    + (costEntity.Overhead ?? 0m)
+                    + (costEntity.SubContract ?? 0m)
+                    + (costEntity.Burden ?? 0m);
 
-                tariff.LaborCost = (costEntity.Labor ?? 0);
+                tariff.LaborCost = (costEntity.Labor ?? 0m);
             }
 
-            var standardTariff = await GetStandardTariffAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity.ClassCategoryCode);
+            var standardTariff = await GetStandardTariffAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity.ClassCategoryCode);
 
             return new TariffDto
             {
@@ -193,43 +189,43 @@ namespace MasterPageTest.Services
             int businessPartnerId = 0;
             string documentNo = string.Empty;
 
-            var regisEntity = await _context.Registrations
+            var regisEntity = await _context.Registration
                 .FirstOrDefaultAsync(x => x.RegistrationNo == req.RegistrationNo);
 
-            var costEntity = await _context.ItemCosts
-                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemId == req.ItemId);
+            var costEntity = await _context.ItemCost
+                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemID == req.ItemID);
 
             if (costEntity != null)
             {
-                tariff.CostPrice = (costEntity.Material ?? 0) 
-                    + (costEntity.Labor ?? 0)
-                    + (costEntity.Overhead ?? 0)
-                    + (costEntity.SubContract ?? 0)
-                    + (costEntity.Burden ?? 0);
+                tariff.CostPrice = (costEntity.Material ?? 0m) 
+                    + (costEntity.Labor ?? 0m)
+                    + (costEntity.Overhead ?? 0m)
+                    + (costEntity.SubContract ?? 0m)
+                    + (costEntity.Burden ?? 0m);
 
-                tariff.LaborCost = (costEntity.Labor ?? 0);
+                tariff.LaborCost = (costEntity.Labor ?? 0m);
             }
 
-            var classEntity = await _context.Classes
+            var classEntity = await _context.Class
                 .FirstOrDefaultAsync(x => x.ClassCode == req.ChargeClassCode);
 
             if (!string.IsNullOrEmpty(req.DocumentNo))
             {
                 var documentNoSplit = req.DocumentNo.Split('-')[0]; 
 
-                var contractEntity = await _context.CustomerContracts
+                var contractEntity = await _context.CustomerContract
                     .FirstOrDefaultAsync(x => x.DocumentNo == documentNoSplit);
 
                 if (contractEntity != null)
                 {
-                    businessPartnerId = Convert.ToInt32(contractEntity.BusinessPartnerId);
+                    businessPartnerId = Convert.ToInt32(contractEntity.BusinessPartnerID);
                     documentNo = contractEntity.DocumentNo;
                 }
             }
 
             var tariffCorporate = await GetCorporateTariffByBusinessPartnerAsync(
                 req.SiteCode,
-                req.ItemId,
+                req.ItemID,
                 req.TransactionDate,
                 req.ChargeClassCode,
                 req.IsRecalculation,
@@ -239,7 +235,7 @@ namespace MasterPageTest.Services
 
             if (tariffCorporate.StandardPrice == null)
             {
-                var tariffStdWalkin = await GetTariffStandartWalkInAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity);
+                var tariffStdWalkin = await GetTariffStandartWalkInAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity);
 
                 return new TariffDto
                 {
@@ -273,71 +269,71 @@ namespace MasterPageTest.Services
 
             var tariff = new TariffDto();
 
-            var classEntity = await _context.Classes
+            var classEntity = await _context.Class
                 .FirstOrDefaultAsync(x => x.ClassCode == req.ChargeClassCode);
 
-            var costEntity = await _context.ItemCosts
-                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemId == req.ItemId);
+            var costEntity = await _context.ItemCost
+                .FirstOrDefaultAsync(x => x.SiteCode == req.SiteCode && x.ItemID == req.ItemID);
 
             if (costEntity != null)
             {
-                tariff.CostPrice = (costEntity.Material ?? 0)
-                    + (costEntity.Labor ?? 0)
-                    + (costEntity.Overhead ?? 0)
-                    + (costEntity.SubContract ?? 0)
-                    + (costEntity.Burden ?? 0);
+                tariff.CostPrice = (costEntity.Material ?? 0m)
+                    + (costEntity.Labor ?? 0m)
+                    + (costEntity.Overhead ?? 0m)
+                    + (costEntity.SubContract ?? 0m)
+                    + (costEntity.Burden ?? 0m);
 
-                tariff.LaborCost = (costEntity.Labor ?? 0);
+                tariff.LaborCost = (costEntity.Labor ?? 0m);
             }
 
             var spUseRegDateInTrf = await GetSysParameterAsync("IsUseRegDateInTarif");
             var spPersonalBpId = await GetSysParameterAsync("PersonalBusinessPartnerID");
 
-            if (Convert.ToBoolean(spUseRegDateInTrf.ParameterValue))
+            if (Convert.ToBoolean(spUseRegDateInTrf?.ParameterValue))
                 req.TransactionDate = Convert.ToDateTime(DateTime.Now);
 
             req.TransactionDate = Convert.ToDateTime(req.TransactionDate.Date);
 
-            if (req.BusinessPartnerId == Convert.ToInt32(spPersonalBpId.ParameterValue))
+            if (req.BusinessPartnerID == Convert.ToInt32(spPersonalBpId?.ParameterValue))
             {
-                return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity);
+                return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity);
             }
             else 
             {
-                var contractEntity = await _context.CustomerContracts
+                var contractEntity = await _context.CustomerContract
                     .FirstOrDefaultAsync(x => x.DocumentNo == req.DocumentNo);
 
                 if (contractEntity == null || contractEntity.DocumentNo == null)
                 {
-                    return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity);
+                    return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity);
                 }
 
                 if (contractEntity.StartingDate <= DateOnly.FromDateTime(req.TransactionDate) &&
                     contractEntity.EndingDate >= DateOnly.FromDateTime(req.TransactionDate))
                 {
-                    if (contractEntity.GccoverageType == "X0104^03")
+                    if (contractEntity.GCCoverageType == "X0104^03")
                     {
-                        return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity);
+                        return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity);
                     }
                     else
                     {
-                        var coverClassEntity = await _context.Classes
+                        var coverClassEntity = await _context.Class
                             .FirstOrDefaultAsync(x => x.ClassCode == req.CoveredClassCode);
 
-                        var tariffCorporateEntity = await _context.ItemTariffCorporates
+                        var tariffCorporateEntity = await _context.ItemTariffCorporate
                             .FirstOrDefaultAsync(x => 
                                 x.SiteCode == req.SiteCode &&
-                                x.BusinessPartnerId == contractEntity.BusinessPartnerId &&
+                                x.BusinessPartnerID == contractEntity.BusinessPartnerID &&
                                 x.DocumentNo == contractEntity.DocumentNo &&
-                                x.ItemId == req.ItemId &&
+                                x.ItemID == req.ItemID &&
                                 x.ClassCategoryCode == coverClassEntity.ClassCategoryCode &&
                                 !x.IsDeleted);
 
-                        var tariffPersonal = await GetTariffStandartMCUAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity);
+                        var tariffPersonal = await GetTariffStandartMCUAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity);
 
                         if (tariffCorporateEntity == null || tariffCorporateEntity.StandardPrice == null)
                         {
-                            return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity);
+                            return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity);
                         }
 
                         if (classEntity.ClassCategoryCode == coverClassEntity.ClassCategoryCode)
@@ -357,12 +353,16 @@ namespace MasterPageTest.Services
 
                         if (tariffPersonal.PersonalPrice >= (tariffCorporateEntity.CustomerPrice + tariffCorporateEntity.PersonalPrice))
                         {
+                            var pP = tariffCorporateEntity.PersonalPrice as decimal?;
+                            var sPS = tariffPersonal.StandardPrice as decimal?;
+                            var sPC = tariffCorporateEntity.StandardPrice as decimal?;
+
                             return new TariffDto
                             {
                                 StandardPrice = tariffPersonal.StandardPrice,
                                 CustomerPrice = tariffCorporateEntity.CustomerPrice,
                                 DiscountPrice = tariffCorporateEntity.DiscountPrice,
-                                PersonalPrice = tariffCorporateEntity.PersonalPrice + (tariffPersonal.StandardPrice - tariffCorporateEntity.StandardPrice),
+                                PersonalPrice = (pP ?? 0m) + ((sPS ?? 0m) - (sPC ?? 0m)),
                                 MinVariablePrice = tariffPersonal.MinVariablePrice,
                                 MaxVariablePrice = tariffPersonal.MaxVariablePrice,
                                 CostPrice = tariff.CostPrice,
@@ -371,13 +371,16 @@ namespace MasterPageTest.Services
                         }
                         else
                         {
+                            var cP = tariff.CustomerPrice;
+                            var pP = tariff.PersonalPrice;
+
                             return new TariffDto
                             {
                                 StandardPrice = tariffCorporateEntity.StandardPrice,
                                 CustomerPrice = tariffCorporateEntity.CustomerPrice,
                                 DiscountPrice = tariffCorporateEntity.DiscountPrice,
                                 PersonalPrice = tariffCorporateEntity.PersonalPrice,
-                                MinVariablePrice = tariff.CustomerPrice + tariff.PersonalPrice,
+                                MinVariablePrice = (cP ?? 0m) + (pP ?? 0m),
                                 MaxVariablePrice = tariffPersonal.MaxVariablePrice,
                                 CostPrice = tariff.CostPrice,
                                 LaborCost = tariff.LaborCost
@@ -387,7 +390,7 @@ namespace MasterPageTest.Services
                 }
                 else
                 {
-                    return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemId, req.TransactionDate, classEntity);
+                    return await GetTariffStandartMCUAsync(req.SiteCode, req.ItemID, req.TransactionDate, classEntity);
                 }
             }
         }
@@ -398,10 +401,10 @@ namespace MasterPageTest.Services
             DateTime transactionDate, 
             string classCategoryCode)
         {
-            var tariffStandard = await _context.ItemTariffStandards
+            var tariffStandard = await _context.ItemTariffStandard
                 .Where(x =>
                     x.SiteCode == siteCode &&
-                    x.ItemId == itemId &&
+                    x.ItemID == itemId &&
                     x.ClassCategoryCode == classCategoryCode &&
                     x.StartingDate <= DateOnly.FromDateTime(transactionDate) &&
                     x.EndingDate >= DateOnly.FromDateTime(transactionDate) &&
@@ -412,10 +415,10 @@ namespace MasterPageTest.Services
 
             if (tariffStandard == null)
             {
-                tariffStandard = await _context.ItemTariffStandards
+                tariffStandard = await _context.ItemTariffStandard
                     .Where(x =>
                         x.SiteCode == siteCode &&
-                        x.ItemId == itemId &&
+                        x.ItemID == itemId &&
                         x.ClassCategoryCode == classCategoryCode &&
                         x.StartingDate <= DateOnly.FromDateTime(DateTime.Now) &&
                         x.EndingDate >= DateOnly.FromDateTime(transactionDate) &&
@@ -447,12 +450,12 @@ namespace MasterPageTest.Services
         {
             var docNo = await GetSysParameterAsync("DocumentPlafonOldTariff");
 
-            var tariffStandard = await _context.ItemTariffStandards
+            var tariffStandard = await _context.ItemTariffStandard
                 .Where(x =>
                     x.SiteCode == siteCode &&
-                    x.ItemId == itemId &&
+                    x.ItemID == itemId &&
                     x.ClassCategoryCode == classCategoryCode &&
-                    x.DocumentNo == (docNo.ParameterValue ?? "") &&
+                    x.DocumentNo == (docNo != null ? docNo.ParameterValue : "") &&
                     x.StartingDate <= DateOnly.FromDateTime(transactionDate) &&
                     x.EndingDate >= DateOnly.FromDateTime(transactionDate) &&
                     !x.IsDeleted)
@@ -485,11 +488,11 @@ namespace MasterPageTest.Services
         {
             var document = isRecalculation ? documentNo : regEntity.CustomerDocumentNo;
 
-            var tarifCorporate = await _context.ItemTariffCorporates
+            var tarifCorporate = await _context.ItemTariffCorporate
                 .AsNoTracking()
                 .Where(x =>
                     x.SiteCode == siteCode &&
-                    x.ItemId == itemId &&
+                    x.ItemID == itemId &&
                     x.ClassCategoryCode == classCategoryCode &&
                     !x.IsDeleted &&
                     x.PersonalPrice > 0 &&
@@ -523,12 +526,12 @@ namespace MasterPageTest.Services
             int businessPartnerId,
             Registration regEntity)
         {
-            var tarifCorporate = await _context.ItemTariffCorporates
+            var tarifCorporate = await _context.ItemTariffCorporate
                 .FirstOrDefaultAsync(x =>
                     x.SiteCode == siteCode &&
-                    x.ItemId == itemId &&
+                    x.ItemID == itemId &&
                     x.ClassCategoryCode == classCategoryCode &&
-                    x.BusinessPartnerId == businessPartnerId &&
+                    x.BusinessPartnerID == businessPartnerId &&
                     x.DocumentNo == documentNo &&
                     !x.IsDeleted &&
                     x.PersonalPrice > 0);
@@ -553,10 +556,10 @@ namespace MasterPageTest.Services
             DateTime transactionDate, 
             Class classEntity)
         {
-            var tariffStandard = await _context.ItemTariffStandards
+            var tariffStandard = await _context.ItemTariffStandard
                 .Where(x =>
                     x.SiteCode == siteCode &&
-                    x.ItemId == itemId &&
+                    x.ItemID == itemId &&
                     x.ClassCategoryCode == classEntity.ClassCategoryCode &&
                     x.StartingDate <= DateOnly.FromDateTime(transactionDate) &&
                     x.EndingDate >= DateOnly.FromDateTime(transactionDate) &&
@@ -567,10 +570,10 @@ namespace MasterPageTest.Services
 
             if (tariffStandard == null)
             {
-                tariffStandard = await _context.ItemTariffStandards
+                tariffStandard = await _context.ItemTariffStandard
                 .Where(x =>
                     x.SiteCode == siteCode &&
-                    x.ItemId == itemId &&
+                    x.ItemID == itemId &&
                     x.ClassCategoryCode == classEntity.ClassCategoryCode &&
                     x.StartingDate <= DateOnly.FromDateTime(DateTime.Now) &&
                     x.EndingDate >= DateOnly.FromDateTime(transactionDate) &&
@@ -600,10 +603,10 @@ namespace MasterPageTest.Services
             DateTime transactionDate,
             Class classEntity)
         {
-            var tariffStandard = await _context.ItemTariffStandards
+            var tariffStandard = await _context.ItemTariffStandard
                 .Where(x =>
                     x.SiteCode == siteCode &&
-                    x.ItemId == itemId &&
+                    x.ItemID == itemId &&
                     x.ClassCategoryCode == classEntity.ClassCategoryCode &&
                     x.StartingDate <= DateOnly.FromDateTime(transactionDate) &&
                     x.EndingDate >= DateOnly.FromDateTime(transactionDate) &&
@@ -666,18 +669,18 @@ namespace MasterPageTest.Services
             }
 
             var sysParBpMandiriInhealth = await GetSysParameterAsync("InhealthMandiriBusinessPartnerID");
-            var bpMandiriInhealth = sysParBpMandiriInhealth != null ? Convert.ToInt32(sysParBpMandiriInhealth) : 0;
+            var bpMandiriInhealth = sysParBpMandiriInhealth != null ? Convert.ToInt32(sysParBpMandiriInhealth.ParameterValue) : 0;
 
-            if (isPlafonCoverage && req.BusinessPartnerId == bpMandiriInhealth)
+            if (isPlafonCoverage && req.BusinessPartnerID == bpMandiriInhealth)
             {
                 return await GetCorporateTariffByBusinessPartnerAsync(
                     regEntity.SiteCode,
-                    req.ItemId,
+                    req.ItemID,
                     req.TransactionDate,
                     req.ChargeClassCode,
                     req.IsRecalculation,
                     contractEntity.DocumentNo,
-                    contractEntity.BusinessPartnerId,
+                    contractEntity.BusinessPartnerID,
                     regEntity);
             }
 
@@ -690,22 +693,22 @@ namespace MasterPageTest.Services
             Class classEntity,
             CustomerContract contractEntity)
         {
-            var coverClassEntity = await _context.Classes
+            var coverClassEntity = await _context.Class
                 .FirstOrDefaultAsync(x => x.ClassCode == req.CoveredClassCode);
 
             var tarifCorporateEntity = await GetCorporateTariffByBusinessPartnerAsync(
                     regEntity.SiteCode,
-                    req.ItemId,
+                    req.ItemID,
                     req.TransactionDate,
                     coverClassEntity.ClassCategoryCode,
                     req.IsRecalculation,
                     contractEntity.DocumentNo,
-                    contractEntity.BusinessPartnerId,
+                    contractEntity.BusinessPartnerID,
                     regEntity);
 
             var tarifPersonal = await GetStandardTariffAsync(
                 regEntity.SiteCode,
-                req.ItemId,
+                req.ItemID,
                 req.TransactionDate,
                 classEntity.ClassCategoryCode);
 
@@ -728,15 +731,15 @@ namespace MasterPageTest.Services
             }
             else
             {
-                var corporateTotal = (tarifCorporateEntity.CustomerPrice ?? 0) + (tarifCorporateEntity.PersonalPrice ?? 0);
-                if ((tarifPersonal.PersonalPrice ?? 0) >= corporateTotal)
+                var corporateTotal = (tarifCorporateEntity.CustomerPrice ?? 0m) + (tarifCorporateEntity.PersonalPrice ?? 0m);
+                if ((tarifPersonal.PersonalPrice ?? 0m) >= corporateTotal)
                 {
                     return new TariffDto
                     {
                         StandardPrice = tarifPersonal.StandardPrice,
                         CustomerPrice = tarifCorporateEntity.CustomerPrice,
                         DiscountPrice = tarifCorporateEntity.DiscountPrice,
-                        PersonalPrice = (tarifCorporateEntity.PersonalPrice ?? 0) + ((tarifPersonal.StandardPrice ?? 0) - (tarifCorporateEntity.StandardPrice ?? 0)),
+                        PersonalPrice = (tarifCorporateEntity.PersonalPrice ?? 0m) + ((tarifPersonal.StandardPrice ?? 0m) - (tarifCorporateEntity.StandardPrice ?? 0m)),
                         MinVariablePrice = tarifPersonal.MinVariablePrice,
                         MaxVariablePrice = tarifPersonal.MaxVariablePrice,
                         IsDifferentClass = true
@@ -755,12 +758,6 @@ namespace MasterPageTest.Services
                     };
                 }
             }
-
-            return await GetStandardTariffAsync(
-                regEntity.SiteCode,
-                req.ItemId,
-                req.TransactionDate,
-                classEntity.ClassCategoryCode);
         }
 
         private async Task<TariffDto> HandlePlafonSantaMariaAsync(
@@ -770,17 +767,17 @@ namespace MasterPageTest.Services
             CustomerContract contractEntity)
         {
             var sysBpNotUseOldTrf = await GetSysParameterAsync("BusinessPartnerNotUsePlafonOldTariff");
-            var excludedBpList = sysBpNotUseOldTrf.ParameterValue + "|";
+            var excludedBpList = (sysBpNotUseOldTrf?.ParameterValue ?? "") + "|";
             string[] BusinessPartnerArr = excludedBpList.Split('|');
             BusinessPartnerArr = BusinessPartnerArr.Where(x => !string.IsNullOrEmpty(x)).ToArray();
 
-            int isInList = Array.IndexOf(BusinessPartnerArr, req.BusinessPartnerId.ToString());
+            int isInList = Array.IndexOf(BusinessPartnerArr, req.BusinessPartnerID.ToString());
 
             if (isInList > -1)
             {
                 var getTariffCorporate = await GetCorporateTariffAsync(
                         regEntity.SiteCode,
-                        req.ItemId,
+                        req.ItemID,
                         req.TransactionDate,
                         classEntity.ClassCategoryCode,
                         req.IsRecalculation,
@@ -804,7 +801,7 @@ namespace MasterPageTest.Services
             {
                 var getStdTrfPlafon = await GetStandardTariffPlafonAsync(
                         regEntity.SiteCode,
-                        req.ItemId,
+                        req.ItemID,
                         req.TransactionDate,
                         classEntity.ClassCategoryCode);
 
@@ -812,7 +809,7 @@ namespace MasterPageTest.Services
                 {
                     var getTrfCorporate = await GetCorporateTariffAsync(
                             regEntity.SiteCode,
-                            req.ItemId,
+                            req.ItemID,
                             req.TransactionDate,
                             classEntity.ClassCategoryCode,
                             req.IsRecalculation,
@@ -836,7 +833,7 @@ namespace MasterPageTest.Services
 
             return await GetStandardTariffAsync(
                 regEntity.SiteCode, 
-                req.ItemId, 
+                req.ItemID, 
                 req.TransactionDate, 
                 classEntity.ClassCategoryCode);
         }
@@ -849,7 +846,7 @@ namespace MasterPageTest.Services
         {
             var getStdTrfPlafon = await GetStandardTariffPlafonAsync(
                         regEntity.SiteCode,
-                        req.ItemId,
+                        req.ItemID,
                         req.TransactionDate,
                         classEntity.ClassCategoryCode);
 
@@ -857,7 +854,7 @@ namespace MasterPageTest.Services
             {
                 var getTrfCorporate = await GetCorporateTariffAsync(
                         regEntity.SiteCode,
-                        req.ItemId,
+                        req.ItemID,
                         req.TransactionDate,
                         classEntity.ClassCategoryCode,
                         req.IsRecalculation,
@@ -880,14 +877,14 @@ namespace MasterPageTest.Services
 
             return await GetStandardTariffAsync(
                 regEntity.SiteCode,
-                req.ItemId,
+                req.ItemID,
                 req.TransactionDate,
                 classEntity.ClassCategoryCode);
         }
 
-        public async Task<SysParameter?> GetSysParameterAsync(string parameterCode)
+        public async Task<sysParameter?> GetSysParameterAsync(string parameterCode)
         {
-            var result = await _context.SysParameters
+            var result = await _context.sysParameter
                 .FirstOrDefaultAsync(x => x.ParameterCode == parameterCode);
             return result;
         }
@@ -908,36 +905,14 @@ namespace MasterPageTest.Services
                     errors.Add("RegistrationNo is required");
                 }
 
-                if (req.ItemId <= 0)
+                if (req.ItemID <= 0)
                 {
-                    errors.Add("ItemId is required");
+                    errors.Add("ItemID is required");
                 }
 
                 if (req.TransactionDate == DateTime.MinValue)
                 {
-                    errors.Add("RegistrationNo is required");
-                }
-
-                if (req.IsRecalculation == null)
-                {
-                    errors.Add("IsRecalculation is required");
-                }
-
-                if (req.BusinessPartnerId <= 0)
-                {
-                    errors.Add("BusinessPartnerId is required");
-                }
-                else if (req.BusinessPartnerId != 1)
-                {
-                    if (string.IsNullOrEmpty(req.DocumentNo))
-                    {
-                        errors.Add("DocumentNo is required");
-                    }
-
-                    if (req.CoveredClassCode == null)
-                    {
-                        errors.Add("CoveredClassCode is required");
-                    }
+                    errors.Add("TransactionDate is required");
                 }
 
                 if (string.IsNullOrEmpty(req.ChargeClassCode))
@@ -953,14 +928,14 @@ namespace MasterPageTest.Services
                     errors.Add("SiteCode is required");
                 }
 
-                if (req.ItemId <= 0)
+                if (req.ItemID <= 0)
                 {
-                    errors.Add("ItemId is required");
+                    errors.Add("ItemID is required");
                 }
 
                 if (req.TransactionDate == DateTime.MinValue)
                 {
-                    errors.Add("RegistrationNo is required");
+                    errors.Add("TransactionDate is required");
                 }
 
                 if (string.IsNullOrEmpty(req.ChargeClassCode))
@@ -976,14 +951,14 @@ namespace MasterPageTest.Services
                     errors.Add("SiteCode is required");
                 }
 
-                if (req.ItemId <= 0)
+                if (req.ItemID <= 0)
                 {
-                    errors.Add("ItemId is required");
+                    errors.Add("ItemID is required");
                 }
 
                 if (req.TransactionDate == DateTime.MinValue)
                 {
-                    errors.Add("RegistrationNo is required");
+                    errors.Add("TransactionDate is required");
                 }
 
                 if (string.IsNullOrEmpty(req.ChargeClassCode))
@@ -999,24 +974,19 @@ namespace MasterPageTest.Services
                     errors.Add("SiteCode is required");
                 }
 
-                if (req.ItemId <= 0)
+                if (req.ItemID <= 0)
                 {
-                    errors.Add("ItemId is required");
+                    errors.Add("ItemID is required");
                 }
 
                 if (req.TransactionDate == DateTime.MinValue)
                 {
-                    errors.Add("RegistrationNo is required");
+                    errors.Add("TransactionDate is required");
                 }
 
-                if (req.IsRecalculation == null)
+                if (req.BusinessPartnerID <= 0)
                 {
-                    errors.Add("IsRecalculation is required");
-                }
-
-                if (req.BusinessPartnerId <= 0)
-                {
-                    errors.Add("BusinessPartnerId is required");
+                    errors.Add("BusinessPartnerID is required");
                 }
 
                 if (string.IsNullOrEmpty(req.DocumentNo))
@@ -1027,11 +997,6 @@ namespace MasterPageTest.Services
                 if (string.IsNullOrEmpty(req.ChargeClassCode))
                 {
                     errors.Add("ChargeClassCode is required");
-                }
-
-                if (req.CoveredClassCode == null)
-                {
-                    errors.Add("CoveredClassCode is required");
                 }
             }
 
@@ -1042,24 +1007,19 @@ namespace MasterPageTest.Services
                     errors.Add("SiteCode is required");
                 }
 
-                if (req.ItemId <= 0)
+                if (req.ItemID <= 0)
                 {
-                    errors.Add("ItemId is required");
+                    errors.Add("ItemID is required");
                 }
 
                 if (req.TransactionDate == DateTime.MinValue)
                 {
-                    errors.Add("RegistrationNo is required");
+                    errors.Add("TransactionDate is required");
                 }
 
-                if (req.IsRecalculation == null)
+                if (req.BusinessPartnerID <= 0)
                 {
-                    errors.Add("IsRecalculation is required");
-                }
-
-                if (req.BusinessPartnerId <= 0)
-                {
-                    errors.Add("BusinessPartnerId is required");
+                    errors.Add("BusinessPartnerID is required");
                 }
 
                 if (string.IsNullOrEmpty(req.DocumentNo))
@@ -1070,11 +1030,6 @@ namespace MasterPageTest.Services
                 if (string.IsNullOrEmpty(req.ChargeClassCode))
                 {
                     errors.Add("ChargeClassCode is required");
-                }
-
-                if (req.CoveredClassCode == null)
-                {
-                    errors.Add("CoveredClassCode is required");
                 }
             }
 

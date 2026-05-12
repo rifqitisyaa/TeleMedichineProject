@@ -362,6 +362,55 @@
             }
             .page-btn:disabled { opacity: .4; cursor: not-allowed; }
             .page-dots { color: var(--gray-400); padding: 0 4px; font-weight: 600; }
+
+
+            @@keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to   { transform: translateX(0);    opacity: 1; }
+            }
+            @@keyframes badgePulse {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,.4); }
+                50%       { box-shadow: 0 0 0 6px rgba(234,179,8,0); }
+            }
+            .badge-new {
+                display: inline-flex; align-items: center; gap: 3px;
+                font-size: 10px; font-weight: 700;
+                padding: 2px 8px; border-radius: 20px;
+                background: #FEF08A; color: #854D0E;
+                margin-left: 6px; vertical-align: middle;
+                animation: badgePulse 1.5s infinite;
+            }
+            .row-new { background: #FEFCE8 !important; }
+            .row-new:hover { background: #FEF9C3 !important; }
+            
+            /* Notif bar */
+            #newAptNotif {
+                display: none;
+                position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+                background: #1B3A6B; color: white;
+                padding: 12px 20px; border-radius: 12px;
+                font-size: 13px; font-weight: 600;
+                box-shadow: 0 4px 20px rgba(0,0,0,.2);
+                z-index: 9999; cursor: pointer;
+                animation: slideIn .3s ease;
+                display: none; align-items: center; gap: 10px;
+            }
+
+           /* HAPUS slideIn, ganti jadi slideDown */
+@@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+.badge-new {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 20px;
+    background: #FEF08A; color: #854D0E;
+    margin-left: 6px; vertical-align: middle;
+}
+.row-new { background: #FEFCE8 !important; }
+.row-new:hover { background: #FEF9C3 !important; }
     </style>
 </head>
 <body>
@@ -470,6 +519,25 @@
         </div>
     </div>
 </nav>
+
+<div id="newAptNotif" style="
+    display: none;
+    width: 30%;
+    background: linear-gradient(90deg, #1B3A6B, #2563EB);
+    color: white; padding: 10px 32px;
+    font-size: 13px; font-weight: 600;
+    align-items: center; justify-content: space-between; gap: 12px;
+    position: sticky; top: 64px; z-index: 99;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+">
+    <span id="newAptCount"></span>
+    <button onclick="dismissNotif()" style="
+        background: rgba(255,255,255,.15); border: none; color: white;
+        padding: 4px 12px; border-radius: 6px; font-size: 12px;
+        font-weight: 600; cursor: pointer; font-family: inherit;">
+        ✕ Tutup
+    </button>
+</div>
 
 <script>
 function toggleProfile() {
@@ -983,7 +1051,120 @@ function closeRegisDetail() {
 
 function goToDetailFromReg() {
     window.location.href = currentDetailUrlFromReg;
+
 }
+
+
+// ── POLLING CONFIG ────────────────────────────────────────────
+const POLL_INTERVAL = 30000;
+const knownAptNos   = new Set(); // dikosongkan dulu, diisi async
+let pollTimer       = null;
+let pollFailCount   = 0;
+const currentDate   = '@ViewBag.Date';
+const currentSearch = '@ViewBag.Search';
+
+// ── INIT: load SEMUA apt nos untuk halaman ini ─────────────────
+async function initKnownApts() {
+    try {
+        const res  = await fetch(`/Home/GetAllAppointmentNos?date=${currentDate}&search=${encodeURIComponent(currentSearch ?? '')}`);
+        const json = await res.json();
+        if (json.success) json.data.forEach(no => knownAptNos.add(no));
+        console.log(`[Poll] Initialized with ${knownAptNos.size} known appointments`);
+    } catch (e) {
+        // Fallback: pakai yang dari model (paginated)
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(m => m.AppointmentNo).ToList()))
+            .forEach(no => knownAptNos.add(no));
+    }
+}
+
+// ── POLLING ───────────────────────────────────────────────────
+async function pollAppointments() {
+    let nextDelay = POLL_INTERVAL;
+    try {
+        const res  = await fetch(`/Home/GetLatestAppointments?date=${currentDate}&search=${encodeURIComponent(currentSearch ?? '')}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const json = await res.json();
+        if (!json.success) {
+            pollFailCount++;
+            nextDelay = Math.min(POLL_INTERVAL * Math.pow(2, pollFailCount), 300000);
+        } else {
+            pollFailCount = 0;
+            const newOnes = json.data.filter(a => !knownAptNos.has(a.appointmentNo));
+            if (newOnes.length > 0) {
+                insertNewRows(newOnes);
+                showNotif(newOnes.length);
+            }
+        }
+    } catch (e) {
+        pollFailCount++;
+        nextDelay = Math.min(POLL_INTERVAL * Math.pow(2, pollFailCount), 300000);
+        console.warn(`[Poll] Error (${pollFailCount}x): ${e.message}`);
+    } finally {
+        pollTimer = setTimeout(pollAppointments, nextDelay);
+    }
+}
+
+// ── INSERT ROW BARU ───────────────────────────────────────────
+function insertNewRows(appointments) {
+    const tbody = document.getElementById('tableBody');
+    appointments.forEach(apt => {
+        if (knownAptNos.has(apt.appointmentNo)) return;
+        knownAptNos.add(apt.appointmentNo);
+
+        const tr = document.createElement('tr');
+        tr.className = 'row-new';
+        tr.dataset.aptNo = apt.appointmentNo;
+
+        // Buat onclick yang bener sesuai hasWorkstation
+        const detailUrl  = `/Home/DetailDashboard?appointmentNo=${encodeURIComponent(apt.encryptedAptNo)}`;
+        const onclickVal = `openRegisModal('${apt.encryptedAptNo}', '${apt.patientName.replace(/'/g,"\\'")}', '${detailUrl}', '${apt.hasWorkstation}', '${apt.appointmentNo}')`;
+
+        tr.innerHTML = `
+            <td class="td-no">•</td>
+            <td class="td-apt">${apt.appointmentNo}</td>
+            <td class="td-patient">
+                ${apt.patientName}
+                <span class="badge-new">🔔 BARU</span>
+            </td>
+            <td class="td-patient">-</td>
+            <td style="color:var(--gray-600)">-</td>
+            <td><span class="date-chip">${apt.appointmentDate}</span></td>
+            <td>
+                <button class="btn-detail btn-register"
+                        data-apt-no="${apt.appointmentNo}"
+                        onclick="${onclickVal}">
+                    <strong>Register</strong>
+                </button>
+            </td>
+        `;
+        tbody.insertBefore(tr, tbody.firstChild);
+    });
+}
+
+// ── NOTIF BAR ─────────────────────────────────────────────────
+function showNotif(count) {
+    const notif = document.getElementById('newAptNotif');
+    document.getElementById('newAptCount').textContent =
+        `🔔 ${count} appointment baru masuk`;
+    notif.style.display = 'flex';
+
+    // Auto dismiss 6 detik
+    clearTimeout(notif._timer);
+    notif._timer = setTimeout(() => dismissNotif(), 6000);
+}
+
+function dismissNotif() {
+    document.getElementById('newAptNotif').style.display = 'none';
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    document.getElementById('newAptNotif').style.display = 'none';
+    await initKnownApts();                          // load semua apt nos dulu
+    pollTimer = setTimeout(pollAppointments, POLL_INTERVAL); // baru mulai poll
+});
+
 </script>
 </body>
 </html>

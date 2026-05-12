@@ -20,5 +20,7 @@ namespace TeleMedichineProject.Models
         public Guid RoleId { get; set; }
 
         public int ServiceUnitId { get; set; }
+
+        public string? ErrorMessage { get; set; }
     }
 }
