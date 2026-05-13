@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
-using TeleMedichineProject.Models.TeleClass;
-using TeleMedichineProject.Models.DTO;
-using TeleMedichineProject.Services;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
 using TeleMedichineProject.Common;
+using TeleMedichineProject.Models.DTO;
+using TeleMedichineProject.Models.TeleClass;
+using TeleMedichineProject.Services;
 
 namespace TeleMedichineProject.Controllers
 {
@@ -167,6 +168,12 @@ namespace TeleMedichineProject.Controllers
             return Json(templates);
         }
 
+        // Request model
+        public class SendToPharmacyRequest
+        {
+            public string RegistrationNo { get; set; }
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetPrescriptions(string registrationNo)
         {
@@ -176,6 +183,8 @@ namespace TeleMedichineProject.Controllers
                                        join dt in _db.JobOrderDt on hd.JobOrderNo equals dt.JobOrderNo
                                        join med in _db.JobOrderDtMedication on new { dt.JobOrderNo, dt.SequenceNo } equals new { med.JobOrderNo, med.SequenceNo }
                                        join item in _db.Item on dt.ItemID equals item.ItemID
+                                       join sgc in _db.sysGeneralCode on med.GCRoute equals sgc.GeneralCodeID
+                                       join unit in _db.ItemUnit on item.BaseUnitCode equals unit.ItemUnitCode
                                        where hd.RegistrationNo == registrationNo && !hd.IsDeleted && !dt.IsDeleted
                                        orderby hd.JobOrderDateTime descending, dt.SequenceNo
                                        select new
@@ -186,7 +195,8 @@ namespace TeleMedichineProject.Controllers
                                            frequency = med.Frequency,
                                            qty = med.DispenseQty,
                                            signa = med.GCSigna,
-                                           route = med.GCRoute,
+                                           route = sgc.GeneralCodeName1,
+                                           unit = unit.ItemUnitName,
                                            remarks = med.Remarks,
                                            date = hd.JobOrderDateTime.ToString("dd MMM yyyy HH:mm")
                                        }).ToListAsync();
@@ -215,7 +225,7 @@ namespace TeleMedichineProject.Controllers
                     var existingJoHd = await _db.JobOrderHd
                         .FirstOrDefaultAsync(x =>
                             x.RegistrationNo == request.RegistrationNo &&
-                            x.JobOrderType == "M" &&
+                            x.JobOrderType == "Medication" &&
                             x.IsReviewed == false &&
                             x.IsDeleted == false);
 
