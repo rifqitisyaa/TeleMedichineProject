@@ -629,7 +629,7 @@
 <!-- WA BUTTON -->
 @if (!string.IsNullOrWhiteSpace(phone))
 {
-    <a href="https://web.whatsapp.com/send?phone=@phone"
+    <a href="https://wa.me/send?phone=@phone"
        onclick="window.open(this.href,'whatsapp','width=1000,height=700'); return false;"
        class="btn-wa" title="WhatsApp">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.564 4.14 1.548 5.876L.057 23.428a.75.75 0 0 0 .916.916l5.552-1.491A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.73 9.73 0 0 1-4.953-1.354l-.355-.21-3.673.987.988-3.588-.23-.368A9.718 9.718 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>
@@ -646,6 +646,7 @@ else
 // ── GLOBALS ──────────────────────────────────────────────────
 const REGISTRATION = '@Model.Registration';
 const MEDICAL_NO   = '@Model.MedicalNo';
+            const PATIENT_PHONE = '@phone';
 const PARAMEDIC_ID = @(_appUserLogin.ParamedicId);
 
 let drugPage = 1, drugPageSize = 10, totalDrugPages = 1, drugKeyword = '';
@@ -1094,20 +1095,21 @@ async function loadPrescriptionHistory() {
             el.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:20px;font-size:13px;">No prescriptions yet.</div>';
             return;
         }
-                   // Ubah template string di el.innerHTML = r.data.map(...)
-            el.innerHTML = r.data.map(item => `
-                <div class="rx-item">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <div class="rx-no"><span class="rx-dot"></span>${item.jobOrderNo}</div>
-                        <div style="font-size:10.5px; color:var(--gray-400);">${item.date}</div>
-                    </div>
-                    <div class="med-name">${item.itemName} <span style="color:var(--teal); font-weight:700;">Qty: ${item.qty}</span></div>
-                    <div style="margin-top:4px;">
-                        <span class="rx-tag">⏱ ${item.frequency}</span>
-                        <span class="rx-tag">${item.dose} ${item.unit}</span>
-                        ${item.route ? `<span class="rx-tag">${item.route}</span>` : ''}
-                    </div>
-                </div>`).join('');
+                       el.innerHTML = r.data.map(function(item) {
+                var routeTag = item.route ? '<span class="rx-tag">' + item.route + '</span>' : '';
+                return '<div class="rx-item">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+                        '<div class="rx-no"><span class="rx-dot"></span>' + item.jobOrderNo + '</div>' +
+                        '<div style="font-size:10.5px; color:var(--gray-400);">' + item.date + '</div>' +
+                    '</div>' +
+                    '<div class="med-name">' + item.itemName + ' <span style="color:var(--teal); font-weight:700;">Qty: ' + item.qty + '</span></div>' +
+                    '<div style="margin-top:4px;">' +
+                        '<span class="rx-tag">&#9201; ' + item.frequency + '</span>' +
+                        '<span class="rx-tag">' + item.dose + ' ' + item.unit + '</span>' +
+                        routeTag +
+                    '</div>' +
+                '</div>';
+            }).join('');
     } catch {
         el.innerHTML = '<div style="text-align:center;color:#EF4444;padding:20px;font-size:13px;">Failed to load prescriptions.</div>';
     }
@@ -1124,80 +1126,68 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
             // ── PRINT RESEP ──────────────────────────────────────────────
-            async function printResep() {
-                // Ambil data prescription dari endpoint yang sudah ada
-                const res = await fetch(`/Prescription/GetPrescriptions?registrationNo=${REGISTRATION}`);
+                 async function printResep() {
+                const res = await fetch('/Prescription/GetPrescriptions?registrationNo=' + REGISTRATION);
                 const r   = await res.json();
 
-                if (!r.data?.length) {
+                if (!r.data || !r.data.length) {
                     showToast('Belum ada resep untuk dicetak.', 'error');
                     return;
                 }
 
-                // Render isi resep
                 const tgl = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
-                const itemRows = r.data.map((item, i) => `
-                    <tr>
-                        <td style="padding:8px 6px; border-bottom:1px solid #E2E8F0; font-size:13px; vertical-align:top;">${i + 1}.</td>
-                        <td style="padding:8px 6px; border-bottom:1px solid #E2E8F0; font-size:13px; vertical-align:top;">
-                            <strong>${item.itemName}</strong><br/>
-                            <span style="font-size:12px; color:#475569;">${item.frequency} &nbsp;|&nbsp; ${item.dose} ${item.unit} &nbsp;${item.route ? '|&nbsp; ' + item.route : ''}</span>
-                            ${item.remarks ? `<br/><span style="font-size:11px; color:#94A3B8;">${item.remarks}</span>` : ''}
-                        </td>
-                        <td style="padding:8px 6px; border-bottom:1px solid #E2E8F0; font-size:13px; text-align:right; vertical-align:top; white-space:nowrap;">
-                            Qty: <strong>${item.qty}</strong>
-                        </td>
-                    </tr>
-                `).join('');
 
-                document.getElementById('resepContent').innerHTML = `
-                    <!-- Header RS -->
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; padding-bottom:16px; border-bottom:2px solid #1B3A6B;">
-                        <div>
-                            <div style="font-size:20px; font-weight:800; color:#1B3A6B;">Sphaira</div>
-                            <div style="font-size:11.5px; color:#475569; margin-top:2px;">Telemedicine Platform</div>
-                        </div>
-                        <div style="text-align:right; font-size:12px; color:#475569;">
-                            <div style="font-weight:700; color:#1B3A6B; font-size:13px;">RESEP ELEKTRONIK</div>
-                            <div style="margin-top:4px;">No. Reg: <strong>${REGISTRATION}</strong></div>
-                            <div>Tanggal: <strong>${tgl}</strong></div>
-                        </div>
-                    </div>
+                var itemRows = r.data.map(function(item, i) {
+                    var remarksRow = item.remarks ? '<br/><span style="font-size:11px;color:#94A3B8;">' + item.remarks + '</span>' : '';
+                    var routeText  = item.route   ? '|&nbsp; ' + item.route : '';
+                    return '<tr>' +
+                        '<td style="padding:8px 6px;border-bottom:1px solid #E2E8F0;font-size:13px;vertical-align:top;">' + (i+1) + '.</td>' +
+                        '<td style="padding:8px 6px;border-bottom:1px solid #E2E8F0;font-size:13px;vertical-align:top;">' +
+                            '<strong>' + item.itemName + '</strong><br/>' +
+                            '<span style="font-size:12px;color:#475569;">' + item.frequency + ' &nbsp;|&nbsp; ' + item.dose + ' ' + (item.unit||'') + ' &nbsp;' + routeText + '</span>' +
+                            remarksRow +
+                        '</td>' +
+                        '<td style="padding:8px 6px;border-bottom:1px solid #E2E8F0;font-size:13px;text-align:right;vertical-align:top;white-space:nowrap;">Qty: <strong>' + item.qty + '</strong></td>' +
+                    '</tr>';
+                }).join('');
 
-                    <!-- Info Pasien -->
-                    <div style="background:#EFF6FF; border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:12.5px;">
-                        <div style="font-weight:700; color:#1B3A6B; margin-bottom:6px; font-size:11px; text-transform:uppercase; letter-spacing:.4px;">Data Pasien</div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                            <div>Nama &nbsp;&nbsp;&nbsp;: <strong id="rp-name">-</strong></div>
-                            <div>No. MR &nbsp;: <strong>${MEDICAL_NO}</strong></div>
-                        </div>
-                    </div>
+                document.getElementById('resepContent').innerHTML =
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #1B3A6B;">' +
+                        '<div>' +
+                            '<div style="font-size:20px;font-weight:800;color:#1B3A6B;">Sphaira</div>' +
+                            '<div style="font-size:11.5px;color:#475569;margin-top:2px;">Telemedicine Platform</div>' +
+                        '</div>' +
+                        '<div style="text-align:right;font-size:12px;color:#475569;">' +
+                            '<div style="font-weight:700;color:#1B3A6B;font-size:13px;">RESEP ELEKTRONIK</div>' +
+                            '<div style="margin-top:4px;">No. Reg: <strong>' + REGISTRATION + '</strong></div>' +
+                            '<div>Tanggal: <strong>' + tgl + '</strong></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="background:#EFF6FF;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12.5px;">' +
+                        '<div style="font-weight:700;color:#1B3A6B;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;">Data Pasien</div>' +
+                        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">' +
+                            '<div>Nama &nbsp;&nbsp;&nbsp;: <strong id="rp-name">-</strong></div>' +
+                            '<div>No. MR &nbsp;: <strong>' + MEDICAL_NO + '</strong></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="font-weight:700;color:#1B3A6B;font-size:11px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Daftar Obat</div>' +
+                    '<table style="width:100%;border-collapse:collapse;">' +
+                        '<thead><tr style="background:#F8FAFC;">' +
+                            '<th style="padding:8px 6px;text-align:left;font-size:11px;color:#94A3B8;border-bottom:2px solid #E2E8F0;width:28px;">#</th>' +
+                            '<th style="padding:8px 6px;text-align:left;font-size:11px;color:#94A3B8;border-bottom:2px solid #E2E8F0;">Nama Obat / Aturan Pakai</th>' +
+                            '<th style="padding:8px 6px;text-align:right;font-size:11px;color:#94A3B8;border-bottom:2px solid #E2E8F0;">Jumlah</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + itemRows + '</tbody>' +
+                    '</table>' +
+                    '<div style="margin-top:32px;display:flex;justify-content:flex-end;">' +
+                        '<div style="text-align:center;font-size:12px;color:#475569;">' +
+                            '<div>Dokter Pemeriksa,</div>' +
+                            '<div style="height:52px;"></div>' +
+                            '<div style="font-weight:700;color:#1B3A6B;border-top:1px solid #CBD5E1;padding-top:4px;">_______________________</div>' +
+                        '</div>' +
+                    '</div>';
 
-                    <!-- Tabel Obat -->
-                    <div style="font-weight:700; color:#1B3A6B; font-size:11px; text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px;">Daftar Obat</div>
-                    <table style="width:100%; border-collapse:collapse;">
-                        <thead>
-                            <tr style="background:#F8FAFC;">
-                                <th style="padding:8px 6px; text-align:left; font-size:11px; color:#94A3B8; border-bottom:2px solid #E2E8F0; width:28px;">#</th>
-                                <th style="padding:8px 6px; text-align:left; font-size:11px; color:#94A3B8; border-bottom:2px solid #E2E8F0;">Nama Obat / Aturan Pakai</th>
-                                <th style="padding:8px 6px; text-align:right; font-size:11px; color:#94A3B8; border-bottom:2px solid #E2E8F0;">Jumlah</th>
-                            </tr>
-                        </thead>
-                        <tbody>${itemRows}</tbody>
-                    </table>
-
-                    <!-- TTD -->
-                    <div style="margin-top:32px; display:flex; justify-content:flex-end;">
-                        <div style="text-align:center; font-size:12px; color:#475569;">
-                            <div>Dokter Pemeriksa,</div>
-                            <div style="height:52px;"></div>
-                            <div style="font-weight:700; color:#1B3A6B; border-top:1px solid #CBD5E1; padding-top:4px;">_______________________</div>
-                        </div>
-                    </div>
-                `;
-
-                // Set nama pasien dari DOM kalau ada
-                const namaEl = document.querySelector('.profile-name');
+                var namaEl = document.querySelector('.profile-name');
                 if (namaEl) document.getElementById('rp-name').textContent = namaEl.textContent.trim();
 
                 document.getElementById('printModal').style.display = 'flex';
@@ -1207,52 +1197,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('printModal').style.display = 'none';
             }
 
-                         async function downloadResepPDF() {
-                const content = document.getElementById('resepContent').innerHTML;
+                            async function downloadResepPDF() {
+                const raw = document.getElementById('resepContent').innerHTML;
+                const tag = 'script';
+                const cleanContent = raw.replace(new RegExp('<' + tag + '\\b[^<]*(?:(?!<\\/' + tag + '>)<[^<]*)*<\\/' + tag + '>', 'gi'), '');
 
                 const style = 'body{font-family:sans-serif;padding:32px;color:#1E293B;}';
-
                 const parts = [
                     '<!DOCTYPE html><html><head><meta charset="UTF-8"/>',
-                    '<style>', style, '</style>',
-                    '</head><body>',
-                    content,
-                    '</body></html>'
+                    '<style>', style, '</' + 'style>',
+                    '</' + 'head><body>',
+                    cleanContent,
+                    '</' + 'body></' + 'html>'
                 ];
 
                 const blob = new Blob(parts, { type: 'text/html' });
                 const url  = URL.createObjectURL(blob);
-                const win  = window.open(url, '_blank', 'width=800,height=700');
-                win.onload = function() { win.focus(); win.print(); URL.revokeObjectURL(url); };
+                const win  = window.open(url, '_blank');
+
+                if (!win) {
+                    alert('Popup diblokir browser! Izinkan popup untuk site ini.');
+                    return;
+                }
+
+                setTimeout(function() {
+                    win.focus();
+                    win.print();
+                    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+                }, 800);
             }
 
-            function sendResepWA() {
-                // Ambil data dari tabel yang sudah dirender di preview
+                       function sendResepWA() {
+                                       const phone = PATIENT_PHONE;
                 const rows = document.querySelectorAll('#resepContent tbody tr');
-                let teks = `*RESEP ELEKTRONIK*\n`;
-                teks    += `No. Reg: ${REGISTRATION}\n`;
-                teks    += `Tgl: ${new Date().toLocaleDateString('id-ID')}\n\n`;
-                teks    += `*Daftar Obat:*\n`;
+                let teks = '*RESEP ELEKTRONIK*\n';
+                teks += 'No. Reg: ' + REGISTRATION + '\n';
+                teks += 'Tgl: ' + new Date().toLocaleDateString('id-ID') + '\n\n';
+                teks += '*Daftar Obat:*\n';
 
-                rows.forEach((row, i) => {
+                rows.forEach(function(row, i) {
                     const cols = row.querySelectorAll('td');
                     if (cols.length >= 2) {
-                        // Ambil teks bersih dari kolom nama obat
-                        teks += `${i+1}. ${cols[1].innerText.replace(/\n+/g,' | ').trim()} — ${cols[2]?.innerText?.trim() ?? ''}\n`;
+                        teks += (i+1) + '. ' + cols[1].innerText.replace(/\n+/g, ' | ').trim() + ' - ' + (cols[2] ? cols[2].innerText.trim() : '') + '\n';
                     }
                 });
 
-                teks += `\n_Dikirim via Sphaira Telemedicine_`;
+                teks += '\n_Dikirim via Sphaira Telemedicine_';
 
-                const phone = '@phone'.replace(/\D/g,''); // nilai dari Razor
-                const url   = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(teks)}`;
+                const url = 'https://wa.me/send?phone=' + PATIENT_PHONE + '&text=' + encodeURIComponent(teks);
                 window.open(url, 'whatsapp', 'width=1000,height=700');
             }
-
-            // Tutup modal kalau klik di luar
-            document.getElementById('printModal').addEventListener('click', e => {
-                if (e.target === e.currentTarget) closePrintModal();
-            });
 </script>
 </body>
 </html>
