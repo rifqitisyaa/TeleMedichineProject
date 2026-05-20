@@ -276,6 +276,21 @@
         .lookup-item:hover, .lookup-item.focused { background: var(--blue-lt); color: var(--navy); font-weight: 600; }
         .lookup-item.empty { color: var(--gray-400); cursor: default; font-style: italic; }
         .lookup-item.empty:hover { background: white; }
+
+            .history-tab {
+                border: none;
+                background: #E2E8F0;
+                padding: 8px 14px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+                .history-tab.active {
+                    background: #1D4ED8;
+                    color: white;
+                }
     </style>
 </head>
 <body>
@@ -376,11 +391,30 @@
                     <div class="soap-cell">
                             <div class="soap-label"><span class="soap-dot o"></span> Objective</div>
                     <textarea class="soap-textarea" id="soapObjective" placeholder="Objective findings..."></textarea></div>
-                        <div class="soap-cell"><div class="soap-label"><span class="soap-dot a"></span> Assessment</div><textarea class="soap-textarea" id="soapAssessment" placeholder="Clinical assessment..."></textarea></div>
+                        <div class="soap-cell">
+                            <div class="soap-label"><span class="soap-dot a"></span> Assessment</div>
+                            <div style="position:relative;">
+                                <textarea class="soap-textarea" id="soapAssessment" 
+                                          placeholder="Ketik diagnosis atau kode ICD-10..."
+                                          oninput="searchIcd10(this.value)" autocomplete="off"></textarea>
+                                <div id="icd10-dropdown" style="
+                                    display:none; position:absolute; z-index:999; 
+                                    background:white; border:1px solid #E2E8F0;
+                                    border-radius:8px; width:100%; max-height:200px;
+                                    overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,.1);
+                                    top:100%; left:0;">
+                                </div>
+                            </div>
+                        </div>
                         <div class="soap-cell"><div class="soap-label"><span class="soap-dot p"></span> Plan</div><textarea class="soap-textarea" id="soapPlan" placeholder="Treatment plan..."></textarea></div>
                 </div>
             </div>
             <div style="padding:14px 16px; border-top:1px solid var(--gray-200); display:flex; justify-content:flex-end; gap:8px; flex-shrink:0;">
+                <a href="/Soap/PrintSoap?registrationNo=@Model.Registration" 
+                   target="_blank"
+                   class="btn-secondary" style="text-decoration:none; padding:8px 16px; font-size: 12.5px; display: flex; align-items: center; justify-content: center;">
+                    🖨️ Print SOAP
+                </a>
                 <button onclick="openSoapModal()" style="background:white; color:var(--navy); border:1.5px solid var(--navy); padding:6px 16px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer;">📋 SOAP History</button>
                 <button onclick="saveSoap()" id="btnSaveSoap" class="btn-primary">Add SOAP</button>
             </div>
@@ -396,6 +430,14 @@
                         Medication
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
+                        @if (!string.IsNullOrEmpty(Model.Registration))
+                        {
+                            <a href="/Prescription/PrintPrescription?registrationNo=@Model.Registration"
+                               target="_blank"
+                               class="btn-secondary" style="text-decoration:none; padding:3px 10px; font-size:10px; font-weight:700; display: flex; align-items: center; justify-content: center;">
+                                🖨️ PDF Print
+                            </a>
+                        }
                         <button onclick="printResep()" id="btnPrintResep" style="display:flex; align-items:center; gap:5px; background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; font-family:inherit; cursor:pointer;">
                             <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
                             Print Resep
@@ -431,6 +473,22 @@
             </div>
                 
         </div>
+
+         <!-- Patient History -->
+        <div class="section-card">
+                <div class="section-header">
+                    <div class="section-header-left">
+                        <div class="section-header-icon">
+                            <svg width="13" height="13" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                        </div>
+                        Patient History
+                    </div>
+                </div>
+            <div class="card-scroll" id="patientHistoryList">
+                <div style="text-align:center; color:#94A3B8; padding:20px; font-size:13px;">Loading history...</div>
+            </div>
+        </div>
+
     </main>
 
         <!-- Print Resep PREVIEW MODAL -->
@@ -642,10 +700,89 @@ else
     </button>
 }
 
+    <div id="vitalHistoryModal"
+         style="
+        display:none;
+        position:fixed;
+        inset:0;
+        background:rgba(15,23,42,.55);
+        z-index:9999;
+        align-items:center;
+        justify-content:center;
+        ">
+
+        <div style="
+            width:700px;
+            max-width:95%;
+            max-height:85vh;
+            overflow:auto;
+            background:white;
+            border-radius:16px;
+            box-shadow:0 10px 30px rgba(0,0,0,.15);
+            ">
+
+            <div style="
+                padding:16px 20px;
+                border-bottom:1px solid #E2E8F0;
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                ">
+
+                <div style="font-size:16px;font-weight:700;color:#1B3A6B;">
+                    Vital History
+                </div>
+
+                <button onclick="closeVitalHistory()"
+                        style="
+                    border:none;
+                    background:none;
+                    font-size:22px;
+                    cursor:pointer;
+                    ">
+                    ×
+                </button>
+            </div>
+
+            <div style="
+                display:flex;
+                gap:8px;
+                padding:12px 18px;
+                border-bottom:1px solid #E2E8F0;
+                ">
+
+                <button class="history-tab active"
+                        onclick="changeHistoryTab('vital', this)">
+                    Vital Sign
+                </button>
+
+                <button class="history-tab"
+                        onclick="changeHistoryTab('soap', this)">
+                    SOAP
+                </button>
+
+                <button class="history-tab"
+                        onclick="changeHistoryTab('lab', this)">
+                    Lab
+                </button>
+
+            </div>
+
+            <div id="historyTabContent"
+                 style="
+                padding:18px;
+                max-height:70vh;
+                overflow:auto;
+                ">
+            </div>
+        </div>
+    </div>
+
 <script>
 // ── GLOBALS ──────────────────────────────────────────────────
 const REGISTRATION = '@Model.Registration';
 const MEDICAL_NO   = '@Model.MedicalNo';
+            let CURRENT_REG_NO = '';
             const PATIENT_PHONE = '@phone';
 const PARAMEDIC_ID = @(_appUserLogin.ParamedicId);
 
@@ -812,6 +949,205 @@ async function loadSoapHistory() {
 function toggleSoapItem(i) {
     const c = document.getElementById(`soapItem-${i}`);
     const a = document.getElementById(`arrow-${i}`);
+    const open = c.style.display === 'flex';
+    c.style.display = open ? 'none' : 'flex';
+    a.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// ── PATIENT HISTORY ───────────────────────────────────────────
+            async function openVitalHistory(regNo) {
+
+                CURRENT_REG_NO = regNo;
+                document.getElementById('vitalHistoryModal').style.display = 'flex';
+                changeHistoryTab('vital');
+            }
+
+                        async function changeHistoryTab(tab, el = null) {
+
+                document.querySelectorAll('.history-tab')
+                    .forEach(x => x.classList.remove('active'));
+
+                if (el)
+                    el.classList.add('active');
+
+                const content = document.getElementById('historyTabContent');
+
+                content.innerHTML = 'Loading...';
+
+                if (tab === 'vital') {
+
+                    const res = await fetch(
+                        `/PatientHistory/GetVitalHistory?RegistrationNumber=${CURRENT_REG_NO}`
+                    );
+
+                    const r = await res.json();
+
+                    content.innerHTML = renderVital(r.data);
+                }
+
+                else if (tab === 'soap') {
+
+                    const res = await fetch(
+                        `/Soap/GetSoapHistory?RegistrationNo=${CURRENT_REG_NO}`
+                    );
+
+                    const r = await res.json();
+
+                    content.innerHTML = renderSoap(r.data);
+                }
+            }
+
+async function loadPatientHistory() {
+    const el = document.getElementById('patientHistoryList');
+
+    try {
+        const res = await fetch(`/PatientHistory/GetPatientHistory?medicalNo=${MEDICAL_NO}`);
+        const r = await res.json();
+
+        if (!r.success || !r.data.length) {
+            el.innerHTML = `
+                <div style="text-align:center;color:#94A3B8;padding:20px;font-size:13px;">
+                    No patient history.
+                </div>`;
+            return;
+        }
+
+        el.innerHTML = r.data.map((item, i) => {
+            const d = new Date(item.regDate);
+
+            return `
+            <div style="border-bottom:1px solid #E2E8F0;">
+                <div
+                    onclick="openVitalHistory('${item.regNo}')"
+                    style="
+                        padding:12px 16px;
+                        cursor:pointer;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                    ">
+
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:#1B3A6B;">
+                            ${item.regNo}
+                        </div>
+
+                        <div style="font-size:11px;color:#64748B;margin-top:4px;">
+                            ${d.toLocaleDateString('id-ID', {
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric'
+                            })}
+                        </div>
+                    </div>
+
+                    <div style="font-size:11px;color:#2563EB;font-weight:600;">
+                        View
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.log(err);
+
+        el.innerHTML = `
+            <div style="text-align:center;color:#EF4444;padding:20px;font-size:13px;">
+                Failed to load patient history.
+            </div>`;
+    }
+}
+
+             async function openVitalHistory(regNo) {
+
+                CURRENT_REG_NO = regNo;
+
+                document.getElementById('vitalHistoryModal').style.display = 'flex';
+
+                changeHistoryTab('vital');
+            }
+
+                        async function changeHistoryTab(tab, el = null) {
+
+                document.querySelectorAll('.history-tab')
+                    .forEach(x => x.classList.remove('active'));
+
+                if (el)
+                    el.classList.add('active');
+
+                const content = document.getElementById('historyTabContent');
+
+                content.innerHTML = 'Loading...';
+
+                if (tab === 'vital') {
+
+                    const res = await fetch(
+                        `/PatientHistory/GetVitalHistory?RegistrationNumber=${CURRENT_REG_NO}`
+                    );
+
+                    const r = await res.json();
+
+                    content.innerHTML = renderVital(r.data);
+                }
+
+                else if (tab === 'soap') {
+
+                    const res = await fetch(
+                        `/Soap/GetSoapHistory?RegistrationNo=${CURRENT_REG_NO}`
+                    );
+
+                    const r = await res.json();
+
+                   
+                }
+            }
+
+                        function renderVital(data) {
+
+                if (!data || !data.length) {
+
+                    return `
+                        <div style="padding:20px;text-align:center;color:#94A3B8;">
+                            No vital history
+                        </div>
+                    `;
+                }
+
+                return data.map(x => `
+
+                    <div style="
+                        border:1px solid #E2E8F0;
+                        border-radius:10px;
+                        padding:14px;
+                        margin-bottom:12px;
+                    ">
+
+                        <div style="
+                            font-size:13px;
+                            font-weight:700;
+                            color:#1B3A6B;
+                            margin-bottom:8px;
+                        ">
+                            ${x.vitalSignName ?? '-'}
+                        </div>
+
+                        <div style="font-size:13px;color:#334155;">
+                            Value :
+                            <strong>${x.value ?? '-'}</strong> ${x.vitalSignUnit}
+                        </div>
+
+                    </div>
+
+                `).join('');
+            }
+
+            function closeVitalHistory() {
+                document.getElementById('vitalHistoryModal').style.display = 'none';
+            }
+
+function togglePatientHistoryItem(i) {
+    const c = document.getElementById(`ph-item-${i}`);
+    const a = document.getElementById(`ph-arrow-${i}`);
     const open = c.style.display === 'flex';
     c.style.display = open ? 'none' : 'flex';
     a.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
@@ -1123,6 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadInstruction();
     fetchDrugList('', 1);
     loadPrescriptionHistory();
+    loadPatientHistory();
 });
 
             // ── PRINT RESEP ──────────────────────────────────────────────
@@ -1213,7 +1550,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const blob = new Blob(parts, { type: 'text/html' });
                 const url  = URL.createObjectURL(blob);
-                const win  = window.open(url, '_blank');
 
                 if (!win) {
                     alert('Popup diblokir browser! Izinkan popup untuk site ini.');
@@ -1247,6 +1583,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = 'https://wa.me/send?phone=' + PATIENT_PHONE + '&text=' + encodeURIComponent(teks);
                 window.open(url, 'whatsapp', 'width=1000,height=700');
             }
+
+            // ── ICD-10 AUTOCOMPLETE ──────────────────────────────────────
+            let icd10Timer;
+            async function searchIcd10(term) {
+                clearTimeout(icd10Timer);
+                const dropdown = document.getElementById('icd10-dropdown');
+                if (!term || term.length < 2) { dropdown.style.display = 'none'; return; }
+
+                icd10Timer = setTimeout(async () => {
+                    const res  = await fetch(`/Soap/SearchIcd10?term=${encodeURIComponent(term)}`);
+                    const data = await res.json();
+                    
+                    if (!data.length) { dropdown.style.display = 'none'; return; }
+
+                    dropdown.innerHTML = data.map(d => `
+                        <div onclick="selectIcd10('${d.code}', '${d.description?.replace(/'/g, "\\'")}')"
+                             style="padding:8px 12px; cursor:pointer; font-size:12.5px; 
+                                    border-bottom:1px solid #F1F5F9;"
+                             onmouseover="this.style.background='#F8FAFC'"
+                             onmouseout="this.style.background='white'">
+                            <strong style="color:#1B3A6B;">${d.code}</strong> — ${d.description}
+                        </div>`).join('');
+                    dropdown.style.display = 'block';
+                }, 300);
+            }
+
+            function selectIcd10(code, description) {
+                const ta = document.getElementById('soapAssessment');
+                const current = ta.value.trim();
+                // Append ke assessment kalau sudah ada text
+                ta.value = current ? `${current}\n${code} — ${description}` : `${code} — ${description}`;
+                document.getElementById('icd10-dropdown').style.display = 'none';
+                ta.focus();
+            }
+
+            // Tutup dropdown kalau klik di luar
+            document.addEventListener('click', e => {
+                if (!e.target.closest('#soapAssessment') && !e.target.closest('#icd10-dropdown'))
+                    document.getElementById('icd10-dropdown').style.display = 'none';
+            });
 </script>
 </body>
 </html>

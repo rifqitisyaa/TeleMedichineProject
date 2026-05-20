@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using TeleMedichineProject.Common;
 using TeleMedichineProject.Models.TeleClass;
 
+using TeleMedichineProject.Services;
+
 namespace TeleMedichineProject.Controllers
 {
     [Authorize]
@@ -16,6 +18,77 @@ namespace TeleMedichineProject.Controllers
         {
             _db = db;
             _appUserLogin = appUserLogin;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchIcd10(string term, int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+                return Json(Array.Empty<object>());
+
+            term = term.Trim().ToUpper();
+
+            var results = await _db.ICD10_
+                .Where(x =>
+                    (x.CODE != null && x.CODE.StartsWith(term)) ||
+                    (x.DESCRIPTION != null && x.DESCRIPTION.Contains(term)))
+                .OrderBy(x => x.CODE!.StartsWith(term) ? 0 : 1)
+                .ThenBy(x => x.CODE)
+                .Take(limit)
+                .Select(x => new { code = x.CODE, description = x.DESCRIPTION })
+                .ToListAsync();
+
+            return Json(results);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PrintSoap(string registrationNo)
+        {
+            var reg = await _db.Registration.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RegistrationNo == registrationNo);
+            if (reg == null) return NotFound();
+
+            var latestNote = await _db.PatientNotes
+                .Where(p => p.RegistrationNo == registrationNo 
+                         && p.GCPatientNotesType == "X0085^003")
+                .OrderByDescending(p => p.NotesDateTime)
+                .FirstOrDefaultAsync();
+
+            var apt = await _db.Appointment.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.AppointmentNo == reg.AppointmentNo);
+
+            var paramedic = await _db.Paramedic.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ParamedicID == reg.ParamedicID);
+
+            // Parse SOAP dari Notes string
+            string subj = "", obj = "", assess = "", plan = "";
+            if (latestNote?.Notes != null)
+            {
+                var lines = latestNote.Notes.Split('\n');
+                foreach (var line in lines)
+                {
+                    if (line.StartsWith("SUBJECTIVE :"))  subj   = line["SUBJECTIVE :".Length..].Trim();
+                    if (line.StartsWith("OBJECTIVE :"))   obj    = line["OBJECTIVE :".Length..].Trim();
+                    if (line.StartsWith("ASSESSMENT :"))  assess = line["ASSESSMENT :".Length..].Trim();
+                    if (line.StartsWith("PLANNING :"))    plan   = line["PLANNING :".Length..].Trim();
+                }
+            }
+
+            var pdfService = HttpContext.RequestServices.GetRequiredService<IPdfService>();
+            var pdf = pdfService.GenerateSoapNote(new SoapPrintData
+            {
+                RegistrationNo = registrationNo,
+                PatientName    = apt?.PatientName ?? $"{apt?.FirstName} {apt?.LastName}".Trim() ?? "-",
+                MedicalNo      = reg.MedicalNo,
+                DoctorName     = paramedic?.ParamedicName ?? "-",
+                VisitDate      = reg.RegistrationDateTime,
+                Subjective     = subj,
+                Objective      = obj,
+                Assessment     = assess,
+                Planning       = plan
+            });
+
+            return File(pdf, "application/pdf", $"SOAP_{registrationNo}_{DateTime.Now:yyyyMMddHHmm}.pdf");
         }
 
         public class SaveSoapRequest

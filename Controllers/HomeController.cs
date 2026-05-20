@@ -10,6 +10,9 @@ using TeleMedichineProject.Helpers;
 using TeleMedichineProject.Models;
 using TeleMedichineProject.Models.DTO;
 using TeleMedichineProject.Models.TeleClass;
+using Microsoft.AspNetCore.SignalR;
+using TeleMedichineProject.Hubs;
+using Microsoft.AspNetCore.OutputCaching;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
@@ -21,11 +24,14 @@ namespace TeleMedichineProject.Controllers
         private readonly ErcDbContext _db;
         private readonly AppDbContext _appDb;
         private readonly AppUserLogin _appUserLogin;
+        private readonly IHubContext<AppointmentHub> _hub;
 
-        public HomeController(ErcDbContext db, AppUserLogin appUserLogin)
+        public HomeController(ErcDbContext db, AppDbContext appDb, AppUserLogin appUserLogin, IHubContext<AppointmentHub> hub)
         {
             _db = db;
+            _appDb = appDb;
             _appUserLogin = appUserLogin;
+            _hub = hub;
         }
         public async Task<IActionResult> Index(string? search, string? date, int page = 1)
         {
@@ -94,7 +100,12 @@ namespace TeleMedichineProject.Controllers
         {
             try
             {
-                var query = _db.Appointment.Where(a => !a.IsDeleted);
+                var registeredNos = await _db.Registration
+                    .Where(r => !r.IsDeleted)
+                    .Select(r => r.AppointmentNo)
+                    .ToListAsync();
+
+                var query = _db.Appointment.Where(a => !a.IsDeleted && !registeredNos.Contains(a.AppointmentNo));
 
                 if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
                     query = query.Where(a => a.AppointmentDateTime.Date == parsedDate.Date);
@@ -118,7 +129,12 @@ namespace TeleMedichineProject.Controllers
         {
             try
             {
-                var query = _db.Appointment.AsQueryable();
+                var registeredNos = await _db.Registration
+                    .Where(r => !r.IsDeleted)
+                    .Select(r => r.AppointmentNo)
+                    .ToListAsync();
+
+                var query = _db.Appointment.Where(a => !a.IsDeleted && !registeredNos.Contains(a.AppointmentNo));
 
                 if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
                     query = query.Where(a => a.AppointmentDateTime.Date == parsedDate.Date);
@@ -244,6 +260,7 @@ namespace TeleMedichineProject.Controllers
         }
 
         [HttpGet]
+        [OutputCache(PolicyName = "1min")]
         public async Task<IActionResult> GetDokterList()
         {
             var dokters = await _db.Paramedic
@@ -390,6 +407,29 @@ namespace TeleMedichineProject.Controllers
                 _db.Registration.Add(registration);
                 await _db.SaveChangesAsync();
 
+                // Broadcast ke semua client via SignalR
+                var notif = new
+                {
+                    appointmentNo = appointmentNo,
+                    patientName = appointment.PatientName ?? $"{appointment.FirstName} {appointment.LastName}".Trim(),
+                    registrationNo = registrationNo,
+                    workStation = appointment.WorkStationCode,
+                    time = DateTime.Now.ToString("HH:mm"),
+                    encryptedAptNo = EncryptHelper.Encrypt(appointmentNo),
+                    hasWorkstation = !string.IsNullOrWhiteSpace(appointment.WorkStationCode),
+                    appointmentDate = appointment.AppointmentDateTime.ToString("d-M-yyyy")
+                };
+                
+                // Kirim data lengkap untuk insertNewRows
+                await _hub.Clients.Group("all").SendAsync("NewRegistration", notif);
+                
+                if (!string.IsNullOrEmpty(appointment.WorkStationCode))
+                    await _hub.Clients.Group($"ws_{appointment.WorkStationCode}")
+                              .SendAsync("NewRegistration", notif);
+
+                // Tambahan: Trigger refresh list untuk client lain
+                await _hub.Clients.All.SendAsync("UpdateList");
+
                 // 7. Return sukses
                 var detailUrl = Url.Action("DetailDashboard", "Home",
                     new { appointmentNo = EncryptHelper.Encrypt(appointmentNo) });
@@ -443,7 +483,6 @@ namespace TeleMedichineProject.Controllers
                 detailUrl = detailUrl
             });
         }
-
     }
     public class SaveSoapRequest
     {

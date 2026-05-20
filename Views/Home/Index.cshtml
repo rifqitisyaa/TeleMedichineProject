@@ -412,6 +412,7 @@
 .row-new { background: #FEFCE8 !important; }
 .row-new:hover { background: #FEF9C3 !important; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 </head>
 <body>
 
@@ -420,6 +421,11 @@
     <div class="navbar-left">
         <div class="logo"><span>S</span>phaira</div>
         <div class="welcome-text">Welcome back, <strong>@User.Identity?.Name</strong></div>
+       @*  <div id="signalr-status" style="margin-left: 15px; display: flex; align-items: center; gap: 6px; background: #F1F5F9; padding: 4px 10px; border-radius: 20px;">
+            <div id="status-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #94A3B8;"></div>
+            <span id="status-text" style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">SignalR: Connecting</span>
+            <button onclick="testSignalR()" style="margin-left:5px; font-size:9px; border:none; background:#E2E8F0; border-radius:4px; padding:2px 5px; cursor:pointer;">TEST</button>
+        </div> *@
     </div>
     <div class="navbar-right">
         <!-- Profile Dropdown -->
@@ -938,6 +944,15 @@ async function submitRegistrasi() {
         if (result.success) {
             document.getElementById('nomorRegistrasi').textContent = result.registrationNo;
             currentDetailUrl = result.detailUrl;
+            
+            // Perbarui UI: Hapus baris dari tabel atau hilangkan badge BARU
+            const tr = document.querySelector(`tr[data-apt-no="${EncryptHelper_Decrypt(currentAppointmentNo)}"]`);
+            if (tr) {
+                // Opsi 1: Langsung hapus (karena sudah terdaftar)
+                tr.remove();
+                // Opsi 2: Atau ubah jadi detail (sesuai logika controller yang memisahkan list appointment vs list registration)
+            }
+            
             showStep('stepSuccess');
         } else {
             document.getElementById('errorMessage').textContent = result.message;
@@ -951,6 +966,15 @@ async function submitRegistrasi() {
 
 function goToDetail() {
     window.location.href = currentDetailUrl;
+}
+
+// Helper untuk decrypt di sisi client (sama dengan logic helper)
+function EncryptHelper_Decrypt(text) {
+    try {
+        return atob(decodeURIComponent(text)).split('|')[0]; 
+    } catch (e) {
+        return text; 
+    }
 }
 
 // ============================================================
@@ -1055,41 +1079,96 @@ function goToDetailFromReg() {
 }
 
 
-// ── POLLING CONFIG ────────────────────────────────────────────
-const POLL_INTERVAL = 30000;
-const knownAptNos   = new Set(); // dikosongkan dulu, diisi async
-let pollTimer       = null;
-let pollFailCount   = 0;
+// ── SignalR Connection ──────────────────────────────────────
+const signalRConn = new signalR.HubConnectionBuilder()
+    .withUrl("/hubs/appointment")
+    .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+    .build();
+
+function updateSignalRStatus(status, color) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    if (dot && text) {
+        dot.style.background = color;
+        text.textContent = `SignalR: ${status}`;
+        text.style.color = color === '#94A3B8' ? '#64748B' : color;
+    }
+    console.log(`[SignalR Status] ${status}`);
+}
+
+signalRConn.on("NewRegistration", function (data) {
+    console.log("SignalR: Received NewRegistration", data);
+    // Masukkan baris baru secara manual
+    if (data && data.appointmentNo) {
+        insertNewRows([data], true); // true = force show even if known (from broadcast)
+        showNotif(1);
+    }
+});
+
+signalRConn.on("UpdateList", function() {
+    console.log("SignalR: Received UpdateList command");
+    loadAppointments();
+});
+
+signalRConn.onreconnecting(() => updateSignalRStatus("Reconnecting...", "#F59E0B"));
+signalRConn.onreconnected(() => updateSignalRStatus("Connected", "#16A34A"));
+signalRConn.onclose(() => updateSignalRStatus("Disconnected", "#DC2626"));
+
+async function startSignalR() {
+    try {
+        await signalRConn.start();
+        updateSignalRStatus("Connected", "#16A34A");
+        await signalRConn.invoke("JoinAll");
+    } catch (err) {
+        updateSignalRStatus("Error", "#DC2626");
+        console.error("SignalR start error:", err);
+        setTimeout(startSignalR, 5000); 
+    }
+}
+
+async function testSignalR() {
+    if (signalRConn.state === "Connected") {
+        console.log("Triggering SignalR test...");
+        await signalRConn.invoke("TestConnection");
+    } else {
+        alert("SignalR not connected! State: " + signalRConn.state);
+    }
+}
+
+// ── DATA LOADING ──────────────────────────────────────────────
+const knownAptNos   = new Set(); 
 const currentDate   = '@ViewBag.Date';
 const currentSearch = '@ViewBag.Search';
 
-// ── INIT: load SEMUA apt nos untuk halaman ini ─────────────────
 async function initKnownApts() {
     try {
         const res  = await fetch(`/Home/GetAllAppointmentNos?date=${currentDate}&search=${encodeURIComponent(currentSearch ?? '')}`);
         const json = await res.json();
         if (json.success) json.data.forEach(no => knownAptNos.add(no));
-        console.log(`[Poll] Initialized with ${knownAptNos.size} known appointments`);
     } catch (e) {
-        // Fallback: pakai yang dari model (paginated)
-        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(m => m.AppointmentNo).ToList()))
-            .forEach(no => knownAptNos.add(no));
+        const modelApts = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(m => m.AppointmentNo).ToList()));
+        modelApts.forEach(no => knownAptNos.add(no));
     }
 }
 
-// ── POLLING ───────────────────────────────────────────────────
-async function pollAppointments() {
-    let nextDelay = POLL_INTERVAL;
+async function loadAppointments() {
     try {
         const res  = await fetch(`/Home/GetLatestAppointments?date=${currentDate}&search=${encodeURIComponent(currentSearch ?? '')}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
         const json = await res.json();
-        if (!json.success) {
-            pollFailCount++;
-            nextDelay = Math.min(POLL_INTERVAL * Math.pow(2, pollFailCount), 300000);
-        } else {
-            pollFailCount = 0;
+        if (json.success) {
+            const serverNos = new Set(json.data.map(a => a.appointmentNo));
+            
+            // A. HAPUS: Baris di tabel yang sudah tidak ada di data server (berarti sudah terdaftar)
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach(row => {
+                const aptNo = row.dataset.aptNo;
+                if (aptNo && !serverNos.has(aptNo)) {
+                    row.remove();
+                    knownAptNos.delete(aptNo);
+                }
+            });
+
+            // B. TAMBAH: Data dari server yang belum ada di tabel kita
             const newOnes = json.data.filter(a => !knownAptNos.has(a.appointmentNo));
             if (newOnes.length > 0) {
                 insertNewRows(newOnes);
@@ -1097,28 +1176,33 @@ async function pollAppointments() {
             }
         }
     } catch (e) {
-        pollFailCount++;
-        nextDelay = Math.min(POLL_INTERVAL * Math.pow(2, pollFailCount), 300000);
-        console.warn(`[Poll] Error (${pollFailCount}x): ${e.message}`);
-    } finally {
-        pollTimer = setTimeout(pollAppointments, nextDelay);
+        console.error(`[LoadAppointments] Error: ${e.message}`);
     }
 }
 
 // ── INSERT ROW BARU ───────────────────────────────────────────
-function insertNewRows(appointments) {
+function insertNewRows(appointments, force = false) {
     const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+
     appointments.forEach(apt => {
-        if (knownAptNos.has(apt.appointmentNo)) return;
+        if (!force && knownAptNos.has(apt.appointmentNo)) return;
+        
+        // Jika sudah ada tapi dipaksa (broadcast), hapus yang lama dulu biar nggak duplikat
+        if (force) {
+            const oldRow = document.querySelector(`tr[data-apt-no="${apt.appointmentNo}"]`);
+            if (oldRow) oldRow.remove();
+        }
+
         knownAptNos.add(apt.appointmentNo);
 
         const tr = document.createElement('tr');
         tr.className = 'row-new';
         tr.dataset.aptNo = apt.appointmentNo;
 
-        // Buat onclick yang bener sesuai hasWorkstation
         const detailUrl  = `/Home/DetailDashboard?appointmentNo=${encodeURIComponent(apt.encryptedAptNo)}`;
-        const onclickVal = `openRegisModal('${apt.encryptedAptNo}', '${apt.patientName.replace(/'/g,"\\'")}', '${detailUrl}', '${apt.hasWorkstation}', '${apt.appointmentNo}')`;
+        const hasWsStr = apt.hasWorkstation ? 'true' : 'false';
+        const onclickVal = `openRegisModal('${apt.encryptedAptNo}', '${apt.patientName.replace(/'/g,"\\'")}', '${detailUrl}', '${hasWsStr}')`;
 
         tr.innerHTML = `
             <td class="td-no">•</td>
@@ -1145,24 +1229,31 @@ function insertNewRows(appointments) {
 // ── NOTIF BAR ─────────────────────────────────────────────────
 function showNotif(count) {
     const notif = document.getElementById('newAptNotif');
+    if (!notif) return;
+    
     document.getElementById('newAptCount').textContent =
-        `🔔 ${count} appointment baru masuk`;
+        `🔔 ${count} data baru masuk`;
     notif.style.display = 'flex';
 
-    // Auto dismiss 6 detik
     clearTimeout(notif._timer);
-    notif._timer = setTimeout(() => dismissNotif(), 6000);
+    notif._timer = setTimeout(() => dismissNotif(), 8000);
 }
 
 function dismissNotif() {
-    document.getElementById('newAptNotif').style.display = 'none';
+    const notif = document.getElementById('newAptNotif');
+    if (notif) notif.style.display = 'none';
 }
 
 // ── INIT ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('newAptNotif').style.display = 'none';
-    await initKnownApts();                          // load semua apt nos dulu
-    pollTimer = setTimeout(pollAppointments, POLL_INTERVAL); // baru mulai poll
+    const notif = document.getElementById('newAptNotif');
+    if (notif) notif.style.display = 'none';
+    
+    await initKnownApts();
+    startSignalR();
+    
+    // Polling setiap 15 detik sebagai fallback untuk data yang tidak ter-broadcast
+    setInterval(loadAppointments, 15000);
 });
 
 </script>

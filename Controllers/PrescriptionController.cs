@@ -6,6 +6,7 @@ using TeleMedichineProject.Common;
 using TeleMedichineProject.Models.DTO;
 using TeleMedichineProject.Models.TeleClass;
 using TeleMedichineProject.Services;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace TeleMedichineProject.Controllers
 {
@@ -14,12 +15,15 @@ namespace TeleMedichineProject.Controllers
         private readonly ErcDbContext _db;
         private readonly ITariffService _tariffService;
         private readonly AppUserLogin _user;
+        private readonly IPdfService _pdfService;
 
-        public PrescriptionController(ErcDbContext db, ITariffService tariffService, AppUserLogin user)
+        public PrescriptionController(ErcDbContext db, ITariffService tariffService, 
+                                       AppUserLogin user, IPdfService pdfService)
         {
             _db = db;
             _tariffService = tariffService;
             _user = user;
+            _pdfService = pdfService;
         }
 
         [HttpGet]
@@ -67,7 +71,7 @@ namespace TeleMedichineProject.Controllers
                 });
             }
 
-        [HttpGet]
+        [HttpGet] [OutputCache(PolicyName = "30min")]
         public async Task<IActionResult> GetItemUnit()
         {
             // Mengambil data dari tabel TemplateConsumeMethod
@@ -81,7 +85,7 @@ namespace TeleMedichineProject.Controllers
             return Json(itemUnits);
         }
 
-        [HttpGet]
+        [HttpGet] [OutputCache(PolicyName = "30min")]
         public async Task<IActionResult> GetRoute()
         {
             // Mengambil data dari tabel TemplateConsumeMethod
@@ -95,7 +99,7 @@ namespace TeleMedichineProject.Controllers
             return Json(route);
         }
 
-        [HttpGet]
+        [HttpGet] [OutputCache(PolicyName = "30min")]
         public async Task<IActionResult> GetInstruction()
         {
             // Mengambil data dari tabel TemplateConsumeMethod
@@ -109,7 +113,7 @@ namespace TeleMedichineProject.Controllers
             return Json(instruc);
         }
 
-        [HttpGet]
+        [HttpGet] [OutputCache(PolicyName = "30min")]
         public async Task<IActionResult> GetConsumeMethods()
         {
             // Mengambil data dari tabel TemplateConsumeMethod
@@ -366,6 +370,58 @@ namespace TeleMedichineProject.Controllers
                     return Json(new { success = false, message = "Terjadi kesalahan: " + ex.Message });
                 }
             });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PrintPrescription(string registrationNo)
+        {
+            var reg = await _db.Registration.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RegistrationNo == registrationNo);
+            if (reg == null) return NotFound();
+
+            var apt = await _db.Appointment.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.AppointmentNo == reg.AppointmentNo);
+
+            var paramedic = await _db.Paramedic.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ParamedicID == reg.ParamedicID);
+
+            var prescriptions = await (
+                from hd in _db.JobOrderHd
+                join dt in _db.JobOrderDt on hd.JobOrderNo equals dt.JobOrderNo
+                join med in _db.JobOrderDtMedication
+                    on new { dt.JobOrderNo, dt.SequenceNo } equals new { med.JobOrderNo, med.SequenceNo }
+                join item in _db.Item on dt.ItemID equals item.ItemID
+                join sgc in _db.sysGeneralCode on med.GCRoute equals sgc.GeneralCodeID
+                join unit in _db.ItemUnit on item.BaseUnitCode equals unit.ItemUnitCode
+                where hd.RegistrationNo == registrationNo && !hd.IsDeleted && !dt.IsDeleted
+                select new PrescriptionItem
+                {
+                    ItemName  = item.ItemName1,
+                    Dose      = med.Dose.ToString(),
+                    Frequency = med.Frequency ?? "-",
+                    Route     = sgc.GeneralCodeName1 ?? "-",
+                    Signa     = med.GCSigna ?? "-",
+                    Qty       = med.DispenseQty ?? 0,
+                    Unit      = unit.ItemUnitName ?? "-",
+                    Remarks   = med.Remarks
+                }).ToListAsync();
+
+            if (!prescriptions.Any())
+                return BadRequest("Belum ada resep untuk registrasi ini.");
+
+            var data = new PrescriptionPrintData
+            {
+                RegistrationNo = registrationNo,
+                PatientName    = apt?.PatientName ?? $"{apt?.FirstName} {apt?.LastName}".Trim() ?? "-",
+                MedicalNo      = reg.MedicalNo,
+                DoctorName     = paramedic?.ParamedicName ?? "-",
+                SiteCode       = reg.SiteCode,
+                PrintDate      = DateTime.Now,
+                Items          = prescriptions
+            };
+
+            var pdf = _pdfService.GeneratePrescription(data);
+            return File(pdf, "application/pdf", $"Resep_{registrationNo}_{DateTime.Now:yyyyMMddHHmm}.pdf");
         }
     }
 }
