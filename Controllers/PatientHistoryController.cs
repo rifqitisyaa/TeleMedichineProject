@@ -59,6 +59,32 @@ namespace TeleMedichineProject.Controllers
 
                 return Json(new { success = true, data = result });
             }
+            catch (Exception ex) when (ex.Message.Contains("required column") ||
+                                       ex.Message.Contains("not present in the results"))
+            {
+                // SP balik kosong → schema ga ke-return → treat as no data
+                return Json(new { success = true, data = Array.Empty<object>() });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetLabHistory(string RegistrationNumber)
+        {
+            try
+            {
+                var result = await _db.Database
+                    .SqlQueryRaw<LaboratoryHistory>(
+                        "EXEC UspLaboratoryTelemedichine @RegistrationNumber",
+                        new SqlParameter("@RegistrationNumber", RegistrationNumber)
+                    ).ToListAsync();
+
+                return Json(new { success = true, data = result });
+            }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });

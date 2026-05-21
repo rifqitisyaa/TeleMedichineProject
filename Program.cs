@@ -1,17 +1,39 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using TeleMedichineProject.Common;
 using TeleMedichineProject.Helpers;
+using TeleMedichineProject.Hubs;
+using TeleMedichineProject.Infrastructure;
 using TeleMedichineProject.Models;
 using TeleMedichineProject.Models.Common;
 using TeleMedichineProject.Models.TeleClass;
 using TeleMedichineProject.Services;
-using TeleMedichineProject.Hubs;
-using TeleMedichineProject.Infrastructure;
-using Microsoft.AspNetCore.OutputCaching;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("TeleMedichineProject")
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("TeleMedichine.Web"))
+        .AddAspNetCoreInstrumentation()
+        .AddEntityFrameworkCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter()
+        .AddConsoleExporter())
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddOtlpExporter()
+        .AddConsoleExporter())
+    .WithLogging(logging => logging      // ← di sini, sejajar sama WithTracing & WithMetrics
+        .AddOtlpExporter());
 
 // Initialize Security Helpers
 EncryptHelper.Initialize(builder.Configuration["EncryptionSettings:EncryptHelperKey"]);

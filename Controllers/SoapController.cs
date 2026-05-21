@@ -160,6 +160,29 @@ namespace TeleMedichineProject.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetSoapHistoryByRegistration(string registrationNo)
+        {
+            var notes = await _db.PatientNotes
+                .Join(_db.Paramedic,
+                    note => note.ParamedicID,
+                    par => par.ParamedicID,
+                    (note, par) => new { note, par })
+                .Where(x => x.note.RegistrationNo == registrationNo
+                         && x.note.GCPatientNotesType == "X0085^003")
+                .OrderByDescending(x => x.note.NotesDateTime)
+                .Select(x => new {
+                    x.note.SequenceNo,
+                    x.note.Notes,
+                    x.note.NotesDateTime,
+                    x.note.ParamedicID,
+                    x.par.ParamedicName
+                })
+                .ToListAsync();
+
+            return Json(new { success = true, data = notes });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetSoapHistory(string medicalNo)
         {
             var notes = await _db.PatientNotes
